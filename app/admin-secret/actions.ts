@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { revalidatePath } from 'next/cache'
 
-// 1. AI 문제 초안 생성 서버 액션 (오류 감지 및 안전한 실패 처리 포함)
+// 1. AI 문제 초안 생성 서버 액션 (DB 연동 동적 프롬프트 적용)
 export async function generateQuizDraft(formData: FormData) {
   const supabase = await createClient() 
   const { data: { user } } = await supabase.auth.getUser()
@@ -25,6 +25,22 @@ export async function generateQuizDraft(formData: FormData) {
   const count = parseInt(formData.get('count') as string, 10) || 3
 
   try {
+    // ✅ DB에서 저장된 시스템 프롬프트 불러오기
+    const { data: settings } = await supabase
+      .from('site_settings')
+      .select('system_prompt')
+      .eq('id', 1)
+      .single()
+
+    if (!settings || !settings.system_prompt) {
+      return { success: false, error: '시스템 프롬프트가 설정되지 않았습니다. 관리자 페이지에서 프롬프트를 설정해주세요.' }
+    }
+
+    // ✅ 사용자가 정의한 {{category}}와 {{count}} 변수 치환
+    const systemPrompt = settings.system_prompt
+      .replace(/{{category}}/g, categoryId)
+      .replace(/{{count}}/g, count.toString())
+
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
     const modelName = process.env.GEMINI_MODEL_VERSION || 'gemini-2.5-flash'
     
@@ -32,30 +48,6 @@ export async function generateQuizDraft(formData: FormData) {
       model: modelName,
       generationConfig: { responseMimeType: 'application/json' }
     })
-
-    const systemPrompt = `
-      당신은 프로그래밍 퀴즈 출제자입니다.
-      분야: ${categoryId}
-      출제 문항 수: ${count}개
-
-      반드시 아래 JSON 배열 형식으로만 응답하세요.
-      [
-        {
-          "category_id": "${categoryId}",
-          "type": "multiple-choice",
-          "question_text": "문제 내용",
-          "code_snippet": "필요시 코드 작성, 없으면 null",
-          "options": [
-            { "id": "1", "text": "보기1" },
-            { "id": "2", "text": "보기2" },
-            { "id": "3", "text": "보기3" },
-            { "id": "4", "text": "보기4" }
-          ],
-          "answer_id": "정답의 id값",
-          "explanation": "해설 내용"
-        }
-      ]
-    `
 
     const result = await model.generateContent(systemPrompt)
     const responseText = result.response.text()
@@ -68,31 +60,19 @@ export async function generateQuizDraft(formData: FormData) {
     const errorMessage = error.message?.toLowerCase() || ''
     const status = error.status || error.response?.status
 
-    // 1. 토큰 한도 초과 또는 요청 빈도 초과 에러 (HTTP 429)
     if (status === 429 || errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('rate limit')) {
-      return { 
-        success: false, 
-        error: '🚨 무료 토큰 한도를 초과했거나 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.' 
-      }
+      return { success: false, error: '🚨 무료 토큰 한도를 초과했거나 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.' }
     }
 
-    // 2. 모델 이름 오류 또는 권한 오류 (HTTP 404, 403)
     if (status === 404 || errorMessage.includes('not found')) {
-      return { 
-        success: false, 
-        error: '🚨 설정된 AI 모델(버전)을 찾을 수 없습니다. 환경변수(GEMINI_MODEL_VERSION)를 확인해 주세요.' 
-      }
+      return { success: false, error: '🚨 설정된 AI 모델(버전)을 찾을 수 없습니다. 환경변수를 확인해 주세요.' }
     }
 
-    // 3. 기타 알 수 없는 구글 서버 오류 및 JSON 파싱 오류
-    return { 
-      success: false, 
-      error: `문제 생성 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}` 
-    }
+    return { success: false, error: `문제 생성 중 오류가 발생했습니다: ${error.message || '알 수 없는 JSON 포맷 오류'}` }
   }
 }
 
-// 2. 검수 완료된 문제 DB 등록 서버 액션
+// 2. 검수 완료된 문제 DB 등록 서버 액션 (수정 없음)
 export async function saveReviewedQuestions(questions: any[]) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -124,7 +104,6 @@ export async function saveReviewedQuestions(questions: any[]) {
     const { error } = await supabase.from('questions').insert(insertData)
 
     if (error) throw error
-
     revalidatePath('/quiz') 
     
     return { success: true }

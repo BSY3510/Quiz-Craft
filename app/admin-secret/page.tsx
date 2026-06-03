@@ -12,15 +12,16 @@ export default async function AdminDashboardPage() {
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'admin') redirect('/')
 
-  const adminPath = `/admin-${process.env.ADMIN_PATH_SUFFIX}`
+  const adminPath = `/admin-${process.env.NEXT_PUBLIC_ADMIN_PATH_SUFFIX || process.env.ADMIN_PATH_SUFFIX || 'secret'}`
 
-  // ✅ 메뉴 이름 및 경로 업데이트
+  // ✅ 프롬프트 관리 메뉴 추가
   const ADMIN_MENUS = [
     { name: '📊 운영 대시보드', path: `${adminPath}/dashboard`, desc: '전체 지표 요약 및 문제 관리' },
     { name: '👥 통합 회원 관리', path: `${adminPath}/users`, desc: '가입 승인 및 전체 회원 상태 관리' },
     { name: '🚨 신고 내역 처리', path: `${adminPath}/reports`, desc: '사용자 접수 오류 확인 및 정정' },
     { name: '📚 퀴즈 분야 관리', path: `${adminPath}/categories`, desc: '학습 분야 추가, 수정, 삭제' },
     { name: '🤖 AI 완전 자동화', path: `${adminPath}/auto-pipeline`, desc: 'AI 대량 출제 파이프라인' },
+    { name: '⚙️ 프롬프트 관리', path: `${adminPath}/prompt`, desc: 'AI 문제 출제 프롬프트 자유 수정' },
   ]
 
   return (
