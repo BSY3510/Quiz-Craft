@@ -9,6 +9,7 @@ import DeactivateButton from './DeactivateButton'
 import { updateNickname } from './actions'
 import { useToast } from '@/app/components/Toast'
 import { Badge, statusTone } from '@/app/components/ui'
+import { ThemeToggle } from '@/app/components/ThemeToggle'
 import type { Profile } from '@/types/db'
 
 type MyReport = {
@@ -113,6 +114,10 @@ export default function MyPage() {
               <span className="font-bold text-blue-600 dark:text-blue-300 text-sm bg-blue-50 dark:bg-blue-900/40 px-2 py-1 rounded">
                 {profile?.nickname || '미설정 (이메일 사용)'}
               </span>
+            </div>
+            <div className="flex justify-between items-center gap-3">
+              <span className="text-slate-600 dark:text-slate-300 text-sm whitespace-nowrap">화면 테마</span>
+              <ThemeToggle />
             </div>
           </div>
 
