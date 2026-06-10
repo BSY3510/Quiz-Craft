@@ -11,13 +11,22 @@
     @apply bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100;
   }
 
-  /* 폼 글자색 가독성 (라이트/다크). 배경색은 요소 클래스에서 dark: 로 지정 */
+  /* 폼 글자색 라이트 기본값 */
   input, select, textarea {
-    @apply text-slate-800 dark:text-slate-100;
+    @apply text-slate-800;
   }
   input::placeholder, textarea::placeholder {
     @apply text-slate-400 dark:text-slate-500;
   }
+}
+
+/* 다크모드: 폼 컨트롤 글자색을 강제한다.
+   요소에 붙은 text-slate-800 유틸리티(특이도 0,1,0)를 .dark 스코프(0,1,1)로 이김.
+   → 페이지마다 dark:text-* 를 붙이지 않아도 select/input 글자가 다크에서 보인다. */
+.dark input,
+.dark select,
+.dark textarea {
+  color: #f1f5f9; /* slate-100 */
 }
 
 /* 토스트 진입 애니메이션 */
