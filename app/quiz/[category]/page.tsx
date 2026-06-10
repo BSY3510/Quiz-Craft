@@ -27,6 +27,19 @@ interface GradeResult {
   xpAwarded: number;
 }
 
+// 한 세션당 문항 수. 활성 문제가 이보다 적으면 있는 만큼만.
+const SESSION_SIZE = 10
+
+// Fisher-Yates 셔플 (sort(()=>Math.random()-0.5)는 편향이 있어 사용 안 함)
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
 export default function QuizSolverPage({ params }: { params: Promise<{ category: string }> }) {
   const resolvedParams = use(params)
   const categoryId = resolvedParams.category
@@ -35,9 +48,13 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
   const supabase = createClient()
   const toast = useToast()
 
-  const [questions, setQuestions] = useState<Question[]>([])
+  const [pool, setPool] = useState<Question[]>([])        // 분야의 전체 활성 문제(세션 재시작용)
+  const [questions, setQuestions] = useState<Question[]>([]) // 이번 세션 문항(최대 SESSION_SIZE)
   const [isLoading, setIsLoading] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
+  // 세션 집계
+  const [correctCount, setCorrectCount] = useState(0)
+  const [sessionXp, setSessionXp] = useState(0)
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isGrading, setIsGrading] = useState(false)
@@ -59,18 +76,25 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
         .eq('status', 'active')
 
       if (!error && data) {
-        // Fisher-Yates 셔플 (sort(()=>Math.random()-0.5)는 편향이 있어 교체)
-        const shuffled = [...data]
-        for (let i = shuffled.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1))
-          ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-        }
-        setQuestions(shuffled)
+        const shuffled = shuffle(data as Question[])
+        setPool(shuffled)
+        setQuestions(shuffled.slice(0, SESSION_SIZE)) // 첫 세션
       }
       setIsLoading(false)
     }
     fetchQuestions()
   }, [categoryId, supabase])
+
+  // 새 세션 시작 (전체 풀에서 다시 셔플 → SESSION_SIZE 만큼). 결과 화면에서 호출.
+  const handleRestart = () => {
+    setQuestions(shuffle(pool).slice(0, SESSION_SIZE))
+    setCurrentIndex(0)
+    setCorrectCount(0)
+    setSessionXp(0)
+    setSelectedOption(null)
+    setIsSubmitted(false)
+    setResult(null)
+  }
 
   if (isLoading) return (
     <main className="flex min-h-screen flex-col items-center bg-slate-50 dark:bg-slate-900 p-4 pt-8">
@@ -95,16 +119,45 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
   const currentQuestion = questions[currentIndex]
   const isExhausted = currentIndex >= questions.length
 
-  if (isExhausted) return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
-      <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-2">모든 문제를 다 풀었습니다! 🎉</h2>
-      <p className="text-slate-600 dark:text-slate-300 mb-8">오답 노트를 확인하거나 다른 분야에 도전해 보세요.</p>
-      <div className="flex gap-4">
-        <button onClick={() => router.push(`/review/${categoryId}`)} className="px-6 py-3 bg-slate-800 text-white rounded-xl font-bold dark:bg-slate-700 dark:hover:bg-slate-600">오답 노트 가기</button>
-        <button onClick={() => router.push('/quiz')} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold">대시보드로 가기</button>
-      </div>
-    </div>
-  )
+  if (isExhausted) {
+    const total = questions.length
+    const accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0
+    const hasMore = pool.length > SESSION_SIZE
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
+        <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 text-center">
+          <span className="text-5xl">{accuracy >= 80 ? '🏆' : accuracy >= 50 ? '🎉' : '💪'}</span>
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mt-3 mb-1">세션 완료!</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">이번 세션 {total}문제를 모두 풀었어요.</p>
+
+          <div className="grid grid-cols-3 gap-2 mb-6">
+            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+              <p className="text-2xl font-black text-slate-800 dark:text-slate-100">{correctCount}<span className="text-base text-slate-400">/{total}</span></p>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">정답</p>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+              <p className={`text-2xl font-black ${accuracy >= 80 ? 'text-green-600 dark:text-green-400' : accuracy >= 50 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-200'}`}>{accuracy}<span className="text-base">%</span></p>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">정답률</p>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+              <p className="text-2xl font-black text-amber-500 dark:text-amber-400">+{sessionXp}</p>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">획득 XP</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <button onClick={handleRestart} className="w-full p-3.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">
+              {hasMore ? '새 문제로 다시 풀기' : '다시 풀기'}
+            </button>
+            <div className="flex gap-2">
+              <button onClick={() => router.push(`/review/${categoryId}`)} className="flex-1 p-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 transition-colors">오답 노트</button>
+              <button onClick={() => router.push('/quiz')} className="flex-1 p-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 transition-colors">분야 목록</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    )
+  }
 
   const handleSelect = (id: string) => {
     if (isSubmitted) return
@@ -137,6 +190,9 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
       xpAwarded: Number(data.xp_awarded ?? 0),
     })
     setIsSubmitted(true)
+    // 세션 집계 누적
+    if (data.is_correct) setCorrectCount((c) => c + 1)
+    setSessionXp((x) => x + Number(data.xp_awarded ?? 0))
   }
 
   const handleNext = () => {
