@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
-import { updateQuestion } from '../actions'
+import { updateQuestion, setQuestionStatus } from '../actions'
 import { useToast } from '@/app/components/Toast'
 import { Modal } from '@/app/components/Modal'
 import { Pagination } from '@/app/components/Pagination'
@@ -21,6 +21,7 @@ export default function AdminDashboardStatsPage() {
   const [questions, setQuestions] = useState<DashQuestion[]>([])
   const [categories, setCategories] = useState<Pick<Category, 'id' | 'name'>[]>([])
   const [filterCategory, setFilterCategory] = useState<string>('all')
+  const [filterStatus, setFilterStatus] = useState<string>('all')
   const [sortType, setSortType] = useState<string>('recent')
   const [isLoading, setIsLoading] = useState(true)
 
@@ -66,9 +67,18 @@ export default function AdminDashboardStatsPage() {
     toast.success('수정되었습니다.')
   }
 
+  // 검증 큐: 승인(active) / 반려(archived)
+  const handleSetStatus = async (id: string, status: 'active' | 'archived') => {
+    const res = await setQuestionStatus(id, status)
+    if (res.error) { toast.error(res.error); return }
+    setQuestions(questions.map(q => q.id === id ? { ...q, status } : q))
+    toast.success(status === 'active' ? '승인되어 노출됩니다.' : '반려되어 보관 처리되었습니다.')
+  }
+
   // 필터링 및 정렬 파이프라인
   const filteredAndSorted = questions
     .filter(q => filterCategory === 'all' || q.category_id === filterCategory)
+    .filter(q => filterStatus === 'all' || q.status === filterStatus)
     .sort((a, b) => {
       if (sortType === 'recent') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       if (sortType === 'errorRate') return b.errorRate - a.errorRate
@@ -79,9 +89,11 @@ export default function AdminDashboardStatsPage() {
   // ✅ 정렬 및 필터링 처리가 끝난 최종 배열을 10개 단위로 조각내기
   const totalPages = Math.ceil(filteredAndSorted.length / itemsPerPage)
   const paginatedQuestions = filteredAndSorted.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+  const pendingCount = questions.filter(q => q.status === 'pending_review').length
 
   // 필터/정렬 변경 시 1페이지로 리셋하는 핸들러 (effect 대신 이벤트에서 처리)
   const onFilterCategory = (v: string) => { setFilterCategory(v); setCurrentPage(1) }
+  const onFilterStatus = (v: string) => { setFilterStatus(v); setCurrentPage(1) }
   const onSortType = (v: string) => { setSortType(v); setCurrentPage(1) }
 
   return (
@@ -90,10 +102,21 @@ export default function AdminDashboardStatsPage() {
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100">📝 문제 관리</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">등록된 문제를 검색·수정하고 오답률을 확인합니다.</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">등록된 문제를 검색·수정하고, AI 생성분을 검증·승인합니다.</p>
           </div>
           <Link href={adminPath} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">← 관리자 메인</Link>
         </header>
+
+        {/* 검증 대기 안내 */}
+        {pendingCount > 0 && (
+          <button
+            onClick={() => onFilterStatus('pending_review')}
+            className="w-full text-left bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+          >
+            <span className="font-bold text-amber-800 dark:text-amber-300">🕒 검증 대기 {pendingCount}건</span>
+            <span className="text-sm text-amber-700 dark:text-amber-400 ml-2">AI가 생성한 문제가 승인을 기다리고 있습니다. 클릭해 모아보기.</span>
+          </button>
+        )}
 
         <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex gap-4">
           <div className="flex-1">
@@ -101,6 +124,15 @@ export default function AdminDashboardStatsPage() {
             <select value={filterCategory} onChange={(e) => onFilterCategory(e.target.value)} className="w-full p-2 border rounded-lg text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-700">
               <option value="all">전체 분야</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">상태 필터</label>
+            <select value={filterStatus} onChange={(e) => onFilterStatus(e.target.value)} className="w-full p-2 border rounded-lg text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-700">
+              <option value="all">전체 상태</option>
+              <option value="active">활성(노출)</option>
+              <option value="pending_review">검증 대기</option>
+              <option value="archived">보관(반려)</option>
             </select>
           </div>
           <div className="flex-1">
@@ -139,8 +171,14 @@ export default function AdminDashboardStatsPage() {
                         <span className={`font-bold ${q.errorRate > 50 ? 'text-red-500 dark:text-red-400' : 'text-slate-600 dark:text-slate-300'}`}>{q.errorRate.toFixed(1)}%</span>
                         <span className="text-xs text-slate-400 dark:text-slate-500 block">총 {q.totalAttempts}회 풀이</span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4" onClick={(e) => e.stopPropagation()}>
                         <Badge tone={statusTone(q.status)}>{q.status}</Badge>
+                        {q.status === 'pending_review' && (
+                          <div className="flex gap-1 mt-2">
+                            <button onClick={() => handleSetStatus(q.id, 'active')} className="px-2 py-1 bg-green-50 text-green-700 text-xs font-bold rounded border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/50">✓ 승인</button>
+                            <button onClick={() => handleSetStatus(q.id, 'archived')} className="px-2 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded border border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600">✕ 반려</button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}

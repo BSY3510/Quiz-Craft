@@ -59,7 +59,7 @@ export async function runAutoPipeline(categoryId: string, count: number) {
       options: q.options,
       answer_id: q.answer_id,
       explanation: q.explanation,
-      status: 'active', // 사람의 검수 없이 즉시 활성화 (검증 큐는 Phase 8)
+      status: 'pending_review', // ✅ 검증 큐: 관리자 승인 전까지 사용자에게 노출 안 됨
     }))
 
     const { error } = await supabase.from('questions').insert(insertData)

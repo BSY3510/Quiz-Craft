@@ -34,7 +34,7 @@ export default function AutoPipelinePage() {
 
     const result = await runAutoPipeline(category, count)
     if (result.error) setResultMsg(`❌ 실패: ${result.error}`)
-    else setResultMsg(`✅ 성공: ${result.insertedCount}개의 문제가 등록되었습니다!`)
+    else setResultMsg(`✅ 성공: ${result.insertedCount}개 생성 → 검증 큐에 추가됨. 문제 관리에서 승인하면 노출됩니다.`)
     setIsLoading(false)
   }
 

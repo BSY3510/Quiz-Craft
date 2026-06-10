@@ -14,16 +14,18 @@ export default async function AdminHomePage() {
   const adminPath = `/admin-${process.env.NEXT_PUBLIC_ADMIN_PATH_SUFFIX || process.env.ADMIN_PATH_SUFFIX || 'secret'}`
 
   // KPI 집계 (병렬). RLS상 관리자가 전체를 볼 수 있다.
-  const [members, pending, questions, reportsPending] = await Promise.all([
+  const [members, pending, questions, questionsPending, reportsPending] = await Promise.all([
     supabase.from('profiles').select('*', { count: 'exact', head: true }),
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('questions').select('*', { count: 'exact', head: true }),
+    supabase.from('questions').select('*', { count: 'exact', head: true }).eq('status', 'pending_review'),
     supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
   ])
 
   const KPIS = [
     { label: '총 회원', value: members.count ?? 0, href: `${adminPath}/users`, highlight: false },
-    { label: '승인 대기', value: pending.count ?? 0, href: `${adminPath}/users`, highlight: (pending.count ?? 0) > 0 },
+    { label: '가입 승인 대기', value: pending.count ?? 0, href: `${adminPath}/users`, highlight: (pending.count ?? 0) > 0 },
+    { label: '문제 검증 대기', value: questionsPending.count ?? 0, href: `${adminPath}/dashboard`, highlight: (questionsPending.count ?? 0) > 0 },
     { label: '총 문제', value: questions.count ?? 0, href: `${adminPath}/dashboard`, highlight: false },
     { label: '신고 대기', value: reportsPending.count ?? 0, href: `${adminPath}/reports`, highlight: (reportsPending.count ?? 0) > 0 },
   ]
@@ -54,7 +56,7 @@ export default async function AdminHomePage() {
         </header>
 
         {/* KPI 요약 */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {KPIS.map((k) => (
             <Link
               key={k.label}

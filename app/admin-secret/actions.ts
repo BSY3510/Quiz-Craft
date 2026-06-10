@@ -163,6 +163,26 @@ export async function setSystemPrompt(prompt: string) {
   return { success: true }
 }
 
+// 6-1. 문제 상태 변경 (검증 큐 승인/반려). active=노출, pending_review=대기, archived=보관
+export async function setQuestionStatus(
+  id: string,
+  status: 'active' | 'pending_review' | 'archived'
+) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
+
+  if (!['active', 'pending_review', 'archived'].includes(status)) {
+    return { error: '잘못된 상태값입니다.' }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.from('questions').update({ status }).eq('id', id)
+
+  if (error) return { error: '상태 변경 중 오류가 발생했습니다.' }
+  revalidatePath('/quiz')
+  return { success: true }
+}
+
 // 6. AI 모델 버전 저장 (site_settings.gemini_model)
 export async function setGeminiModel(model: string) {
   const c = await checkAdmin()
