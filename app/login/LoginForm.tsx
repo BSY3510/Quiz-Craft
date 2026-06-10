@@ -26,40 +26,40 @@ export default function LoginForm({ isGoogleEnabled }: { isGoogleEnabled: boolea
             </button>
           </form>
         ) : (
-          <button disabled className="w-full flex items-center justify-center gap-3 p-4 bg-slate-100 text-slate-400 font-bold rounded-xl cursor-not-allowed border border-slate-200">
+          <button disabled className="w-full flex items-center justify-center gap-3 p-4 bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 font-bold rounded-xl cursor-not-allowed border border-slate-200 dark:border-slate-600">
             Google 로그인 (현재 비활성화됨)
           </button>
         )}
       </div>
 
       <div className="relative flex items-center py-2">
-        <div className="flex-grow border-t border-slate-200"></div>
-        <span className="flex-shrink-0 mx-4 text-slate-400 text-xs font-bold">또는 이메일로</span>
-        <div className="flex-grow border-t border-slate-200"></div>
+        <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+        <span className="flex-shrink-0 mx-4 text-slate-400 dark:text-slate-500 text-xs font-bold">또는 이메일로</span>
+        <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
       </div>
 
       <form className="space-y-4">
         <div>
           <label className="sr-only" htmlFor="email">이메일</label>
-          <input id="email" name="email" type="email" placeholder="이메일 주소" required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-800" />
+          <input id="email" name="email" type="email" placeholder="이메일 주소" required className="w-full p-4 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-700 transition-all text-slate-800" />
         </div>
         <div>
           <label className="sr-only" htmlFor="password">비밀번호</label>
-          <input id="password" name="password" type="password" placeholder="비밀번호" required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-800" />
+          <input id="password" name="password" type="password" placeholder="비밀번호" required className="w-full p-4 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-700 transition-all text-slate-800" />
         </div>
 
         {/* ✅ 로그인/가입 실패 메시지 표시 (BUG-2) */}
         {errorMsg && (
-          <p role="alert" className="text-sm font-medium text-red-600 text-center bg-red-50 border border-red-100 rounded-lg p-3">
+          <p role="alert" className="text-sm font-medium text-red-600 dark:text-red-400 text-center bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-900 rounded-lg p-3">
             {errorMsg}
           </p>
         )}
 
         <div className="flex gap-3 pt-2">
-          <button formAction={loginAction} disabled={pending} className="flex-1 p-4 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+          <button formAction={loginAction} disabled={pending} className="flex-1 p-4 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-700 dark:hover:bg-slate-600">
             {loginPending ? '로그인 중...' : '로그인'}
           </button>
-          <button formAction={signupAction} disabled={pending} className="flex-1 p-4 bg-white text-slate-700 font-bold rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+          <button formAction={signupAction} disabled={pending} className="flex-1 p-4 bg-white text-slate-700 font-bold rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-600">
             {signupPending ? '가입 중...' : '가입하기'}
           </button>
         </div>
