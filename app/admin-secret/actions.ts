@@ -16,10 +16,10 @@ export async function generateQuizDraft(formData: FormData) {
   const count = parseInt(formData.get('count') as string, 10) || 3
 
   try {
-    // ✅ DB에서 저장된 시스템 프롬프트 불러오기
+    // ✅ DB에서 저장된 시스템 프롬프트 + 모델 불러오기
     const { data: settings } = await supabase
       .from('site_settings')
-      .select('system_prompt')
+      .select('system_prompt, gemini_model')
       .eq('id', 1)
       .single()
 
@@ -41,8 +41,8 @@ export async function generateQuizDraft(formData: FormData) {
     })
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-    const modelName = process.env.GEMINI_MODEL_VERSION || 'gemini-2.5-flash'
-    
+    const modelName = settings.gemini_model || process.env.GEMINI_MODEL_VERSION || 'gemini-3.1-flash-lite'
+
     const model = genAI.getGenerativeModel({
       model: modelName,
       generationConfig: { responseMimeType: 'application/json' }
@@ -160,5 +160,23 @@ export async function setSystemPrompt(prompt: string) {
     .eq('id', 1)
 
   if (error) return { error: '프롬프트 저장 중 오류가 발생했습니다.' }
+  return { success: true }
+}
+
+// 6. AI 모델 버전 저장 (site_settings.gemini_model)
+export async function setGeminiModel(model: string) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
+
+  const clean = model.trim()
+  if (!clean) return { error: '모델명을 선택해 주세요.' }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('site_settings')
+    .update({ gemini_model: clean })
+    .eq('id', 1)
+
+  if (error) return { error: '모델 저장 중 오류가 발생했습니다.' }
   return { success: true }
 }

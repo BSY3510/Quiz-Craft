@@ -4,8 +4,17 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
-import { setGoogleLogin } from '../actions'
+import { setGoogleLogin, setGeminiModel } from '../actions'
 import { useToast } from '@/app/components/Toast'
+
+// 2026-06 무료 티어 모델 (한도 안내). gemini-3.1-flash-lite가 가장 널널.
+const GEMINI_MODELS = [
+  { value: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite (무료 한도 최대 · 권장)' },
+  { value: 'gemini-3-flash', label: 'Gemini 3 Flash' },
+  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite' },
+  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (한도 가장 빡빡)' },
+]
 
 export default function AdminSettingsPage() {
   const supabase = createClient()
@@ -13,12 +22,17 @@ export default function AdminSettingsPage() {
   const toast = useToast()
 
   const [isGoogleEnabled, setIsGoogleEnabled] = useState(false)
+  const [model, setModel] = useState('gemini-3.1-flash-lite')
+  const [isSavingModel, setIsSavingModel] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase.from('site_settings').select('google_login_enabled').eq('id', 1).single()
-      if (data) setIsGoogleEnabled(data.google_login_enabled)
+      const { data } = await supabase.from('site_settings').select('google_login_enabled, gemini_model').eq('id', 1).single()
+      if (data) {
+        setIsGoogleEnabled(data.google_login_enabled)
+        if (data.gemini_model) setModel(data.gemini_model)
+      }
       setIsLoading(false)
     }
     load()
@@ -30,6 +44,15 @@ export default function AdminSettingsPage() {
     if (res.error) return toast.error(res.error)
     setIsGoogleEnabled(newValue)
     toast.success(`구글 로그인이 ${newValue ? '활성화' : '비활성화'} 되었습니다.`)
+  }
+
+  const handleChangeModel = async (value: string) => {
+    setModel(value)
+    setIsSavingModel(true)
+    const res = await setGeminiModel(value)
+    setIsSavingModel(false)
+    if (res.error) return toast.error(res.error)
+    toast.success('AI 모델이 변경되었습니다.')
   }
 
   return (
@@ -55,6 +78,22 @@ export default function AdminSettingsPage() {
           >
             {isLoading ? '...' : isGoogleEnabled ? '활성화됨 (ON)' : '비활성화됨 (OFF)'}
           </button>
+        </section>
+
+        <section className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">AI 출제 모델</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 mb-3">문제 생성(반자동·자동)에 사용할 Gemini 모델입니다. 무료 한도가 모델마다 다릅니다.</p>
+          <select
+            value={model}
+            onChange={(e) => handleChangeModel(e.target.value)}
+            disabled={isLoading || isSavingModel}
+            className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 disabled:opacity-50"
+          >
+            {GEMINI_MODELS.map((m) => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
+          {isSavingModel && <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">저장 중...</p>}
         </section>
       </div>
     </main>

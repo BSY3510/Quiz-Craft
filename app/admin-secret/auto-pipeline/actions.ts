@@ -12,10 +12,10 @@ export async function runAutoPipeline(categoryId: string, count: number) {
 
   const supabase = await createClient()
 
-  // ✅ 반자동과 동일한 마스터 프롬프트 + 분야 가이드 사용(경로 통일)
+  // ✅ 반자동과 동일한 마스터 프롬프트 + 분야 가이드 + 모델 사용(경로 통일)
   const { data: settings } = await supabase
     .from('site_settings')
-    .select('system_prompt')
+    .select('system_prompt, gemini_model')
     .eq('id', 1)
     .single()
 
@@ -37,7 +37,7 @@ export async function runAutoPipeline(categoryId: string, count: number) {
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
   const model = genAI.getGenerativeModel({
-    model: process.env.GEMINI_MODEL_VERSION || 'gemini-2.5-flash',
+    model: settings.gemini_model || process.env.GEMINI_MODEL_VERSION || 'gemini-3.1-flash-lite',
     generationConfig: { responseMimeType: 'application/json' }
   })
 
