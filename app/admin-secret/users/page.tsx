@@ -31,11 +31,9 @@ export default function AdminUsersManagementPage() {
   const handleUpdateStatus = async (userId: string, newStatus: string) => {
     if (!confirm(`해당 회원의 상태를 '${newStatus === 'approved' ? '승인' : '정지'}'(으)로 변경하시겠습니까?`)) return
 
-    // 데이터베이스 상태 업데이트 진행
+    // ✅ 관리자 상태 변경은 정의자 함수 경유(직접 profiles update 금지, SEC-C/D)
     const { error } = await supabase
-      .from('profiles')
-      .update({ status: newStatus })
-      .eq('id', userId)
+      .rpc('admin_set_user_status', { p_target: userId, p_status: newStatus })
 
     if (!error) {
       setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u))

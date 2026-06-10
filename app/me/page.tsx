@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import DeactivateButton from './DeactivateButton'
+import { updateNickname } from './actions'
 
 export default function MyPage() {
   const supabase = createClient()
@@ -49,8 +50,9 @@ export default function MyPage() {
     let isChanged = false
 
     if (nickname && nickname !== profile?.nickname) {
-      const { error } = await supabase.from('profiles').update({ nickname }).eq('id', user.id)
-      if (!error) isChanged = true
+      // ✅ 닉네임 변경은 서버 액션 경유(직접 profiles update 금지, SEC-C)
+      const res = await updateNickname(nickname)
+      if (!res.error) isChanged = true
     }
 
     if (password) {
