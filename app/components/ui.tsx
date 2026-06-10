@@ -8,11 +8,12 @@ type ButtonSize = 'sm' | 'md' | 'lg'
 
 const BTN_VARIANT: Record<ButtonVariant, string> = {
   primary: 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm',
-  dark: 'bg-slate-800 text-white hover:bg-slate-900 shadow-sm',
-  secondary: 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-sm',
+  dark: 'bg-slate-800 text-white hover:bg-slate-900 shadow-sm dark:bg-slate-700 dark:hover:bg-slate-600',
+  secondary:
+    'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-sm dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-700',
   danger: 'bg-red-600 text-white hover:bg-red-700 shadow-sm',
   success: 'bg-green-600 text-white hover:bg-green-700 shadow-sm',
-  ghost: 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+  ghost: 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600',
 }
 const BTN_SIZE: Record<ButtonSize, string> = {
   sm: 'px-3 py-1.5 text-xs rounded-lg',
@@ -37,7 +38,10 @@ export function Button({ variant = 'primary', size = 'md', className = '', ...pr
 /* ───────── Card ───────── */
 export function Card({ className = '', children, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={`bg-white rounded-xl shadow-sm border border-slate-200 ${className}`} {...props}>
+    <div
+      className={`bg-white rounded-xl shadow-sm border border-slate-200 dark:bg-slate-800 dark:border-slate-700 ${className}`}
+      {...props}
+    >
       {children}
     </div>
   )
@@ -47,12 +51,12 @@ export function Card({ className = '', children, ...props }: HTMLAttributes<HTML
 type BadgeTone = 'green' | 'red' | 'yellow' | 'slate' | 'blue' | 'amber'
 
 const BADGE_TONE: Record<BadgeTone, string> = {
-  green: 'bg-green-100 text-green-700',
-  red: 'bg-red-100 text-red-700',
-  yellow: 'bg-yellow-100 text-yellow-800',
-  slate: 'bg-slate-100 text-slate-600',
-  blue: 'bg-blue-100 text-blue-700',
-  amber: 'bg-amber-100 text-amber-800',
+  green: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+  red: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  yellow: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
+  slate: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  blue: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  amber: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
 }
 
 export function Badge({

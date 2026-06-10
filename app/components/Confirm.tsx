@@ -39,14 +39,14 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     <ConfirmContext.Provider value={confirm}>
       {children}
       <Modal open={!!state?.open} onClose={() => close(false)} className="max-w-sm" labelledBy="confirm-title">
-        <h2 id="confirm-title" className="text-lg font-black text-slate-800 mb-2">
+        <h2 id="confirm-title" className="text-lg font-black text-slate-800 dark:text-slate-100 mb-2">
           {state?.title ?? '확인'}
         </h2>
-        <p className="text-sm text-slate-600 whitespace-pre-line mb-6">{state?.message}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-line mb-6">{state?.message}</p>
         <div className="flex gap-2">
           <button
             onClick={() => close(false)}
-            className="flex-1 p-3 bg-slate-100 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-200 transition-colors"
+            className="flex-1 p-3 bg-slate-100 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-200 transition-colors dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
           >
             {state?.cancelText ?? '취소'}
           </button>

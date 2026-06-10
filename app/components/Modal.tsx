@@ -75,7 +75,7 @@ export function Modal({ open, onClose, children, className = 'max-w-md', labelle
         aria-labelledby={labelledBy}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className={`bg-white rounded-2xl p-6 w-full ${className} max-h-[90vh] overflow-y-auto shadow-2xl outline-none`}
+        className={`bg-white dark:bg-slate-800 rounded-2xl p-6 w-full ${className} max-h-[90vh] overflow-y-auto shadow-2xl outline-none`}
       >
         {children}
       </div>
