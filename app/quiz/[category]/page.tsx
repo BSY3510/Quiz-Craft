@@ -3,7 +3,6 @@
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
-import { submitAnswer } from '../actions'
 import { submitReport } from '@/app/actions/report' // ✅ 신고 서버 액션 추가
 
 // ✅ 정답(answer_id)과 해설(explanation)은 클라이언트로 받지 않는다(SEC-A).
@@ -35,6 +34,7 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isGrading, setIsGrading] = useState(false)
   // ✅ 서버 채점 결과(정/오답·정답ID·해설·획득XP)를 담는다.
   const [result, setResult] = useState<GradeResult | null>(null)
 
@@ -89,17 +89,31 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
   }
 
   const handleSubmit = async () => {
-    if (!selectedOption) return
-    setIsSubmitted(true)
+    if (!selectedOption || isGrading) return
+    setIsGrading(true)
 
-    // ✅ 정답 판정·XP 적립은 서버가 결정한다.
-    const res = await submitAnswer(currentQuestion.id, selectedOption)
-    if ('error' in res) {
-      alert(res.error)
-      setIsSubmitted(false)
+    // ✅ 정답 판정·XP 적립은 보안 정의자 함수가 서버에서 결정한다.
+    //    함수를 클라이언트에서 직접 호출(1홉)해 채점 지연을 줄인다.
+    const { data, error } = await supabase.rpc('grade_and_award', {
+      p_question_id: currentQuestion.id,
+      p_selected_option_id: selectedOption,
+    })
+    setIsGrading(false)
+
+    if (error || !data) {
+      console.error('grade_and_award error:', error)
+      alert('채점 처리 중 오류가 발생했습니다. 다시 시도해 주세요.')
       return
     }
-    setResult(res)
+
+    // 결과를 받은 뒤 한 번에 제출 상태로 전환(중간 깜빡임 방지)
+    setResult({
+      isCorrect: Boolean(data.is_correct),
+      answerId: String(data.answer_id),
+      explanation: String(data.explanation ?? ''),
+      xpAwarded: Number(data.xp_awarded ?? 0),
+    })
+    setIsSubmitted(true)
   }
 
   const handleNext = () => {
@@ -211,8 +225,8 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
               </div>
             </div>
           ) : (
-            <button onClick={handleSubmit} disabled={!selectedOption} className="w-full p-4 font-bold text-white bg-slate-800 rounded-xl hover:bg-slate-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
-              제출하기
+            <button onClick={handleSubmit} disabled={!selectedOption || isGrading} className="w-full p-4 font-bold text-white bg-slate-800 rounded-xl hover:bg-slate-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+              {isGrading ? '채점 중...' : '제출하기'}
             </button>
           )}
         </div>
