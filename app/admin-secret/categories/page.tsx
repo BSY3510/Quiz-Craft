@@ -5,11 +5,13 @@ import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
 import { createCategory, toggleCategoryActive, updateCategory, deleteCategory } from './actions'
+import { useToast } from '@/app/components/Toast'
 import type { Category } from '@/types/db'
 
 export default function AdminCategoriesPage() {
   const supabase = createClient()
   const adminPath = useAdminPath()
+  const toast = useToast()
 
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -49,12 +51,12 @@ export default function AdminCategoriesPage() {
 
     const res = await createCategory(newId, newName)
     if (!res.error) {
-      alert('새로운 분야가 등록되었습니다.')
+      toast.success('새로운 분야가 등록되었습니다.')
       setNewId('')
       setNewName('')
       fetchCategories()
     } else {
-      alert(`등록 실패: ${res.error}`)
+      toast.error(`등록 실패: ${res.error}`)
     }
   }
 
@@ -64,7 +66,7 @@ export default function AdminCategoriesPage() {
     if (!res.error) {
       setCategories(categories.map(c => c.id === id ? { ...c, active: !currentStatus } : c))
     } else {
-      alert(res.error)
+      toast.error(res.error)
     }
   }
 
@@ -74,11 +76,11 @@ export default function AdminCategoriesPage() {
 
     const res = await updateCategory(editingCategory.id, editingCategory.name, editingCategory.prompt || '')
     if (!res.error) {
-      alert('분야 정보가 수정되었습니다.')
+      toast.success('분야 정보가 수정되었습니다.')
       setEditingCategory(null)
       fetchCategories()
     } else {
-      alert(`수정 중 오류가 발생했습니다: ${res.error}`)
+      toast.error(`수정 중 오류가 발생했습니다: ${res.error}`)
     }
   }
 
@@ -88,10 +90,10 @@ export default function AdminCategoriesPage() {
 
     const res = await deleteCategory(id)
     if (!res.error) {
-      alert('분야가 성공적으로 삭제되었습니다.')
+      toast.success('분야가 성공적으로 삭제되었습니다.')
       fetchCategories()
     } else {
-      alert(`삭제 실패: ${res.error}`)
+      toast.error(`삭제 실패: ${res.error}`)
     }
   }
 

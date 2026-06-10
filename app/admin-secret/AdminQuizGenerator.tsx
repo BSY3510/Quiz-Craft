@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { generateQuizDraft, saveReviewedQuestions } from './actions'
+import { useToast } from '@/app/components/Toast'
 import type { NormalizedQuestion } from './questionSchema'
 import type { QuestionOption } from '@/types/db'
 
@@ -10,6 +11,7 @@ interface Category { id: string; name: string; }
 
 export default function AdminQuizGenerator() {
   const supabase = createClient()
+  const toast = useToast()
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(false)
   
@@ -38,7 +40,7 @@ export default function AdminQuizGenerator() {
       setDrafts(result.data ?? []) // 정규화된 객체 배열
       setDraftCategory(result.category ?? '')
     } else {
-      alert(`❌ 생성 실패: ${result.error}`)
+      toast.error(`생성 실패: ${result.error}`)
     }
     setIsLoading(false)
   }
@@ -52,14 +54,14 @@ export default function AdminQuizGenerator() {
     try {
       const result = await saveReviewedQuestions(draftCategory, drafts)
       if (result.success) {
-        alert('✅ 성공적으로 DB에 등록되었습니다!')
+        toast.success('성공적으로 DB에 등록되었습니다!')
         setDrafts([])
         setDraftCategory('')
       } else {
-        alert(`❌ 등록 실패: ${result.error}`)
+        toast.error(`등록 실패: ${result.error}`)
       }
     } catch {
-      alert('저장 중 오류가 발생했습니다.')
+      toast.error('저장 중 오류가 발생했습니다.')
     }
   }
 

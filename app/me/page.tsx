@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 import DeactivateButton from './DeactivateButton'
 import { updateNickname } from './actions'
+import { useToast } from '@/app/components/Toast'
 import type { Profile } from '@/types/db'
 
 type MyReport = {
@@ -20,6 +21,7 @@ type MyReport = {
 export default function MyPage() {
   const supabase = createClient()
   const router = useRouter()
+  const toast = useToast()
 
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -71,14 +73,14 @@ export default function MyPage() {
     }
 
     if (isChanged) {
-      alert('개인정보가 성공적으로 변경되었습니다!')
-      setPassword('') 
+      toast.success('개인정보가 성공적으로 변경되었습니다!')
+      setPassword('')
       setProfile(profile ? { ...profile, nickname } : profile) // 화면 즉시 업데이트
-      
+
       // ✅ 가장 중요: Next.js 라우터 캐시를 강제로 새로고침하여 /quiz 이동 시 변경사항이 반영되게 함
       router.refresh()
     } else {
-      alert('변경할 내용이 없거나 오류가 발생했습니다.')
+      toast.info('변경할 내용이 없거나 오류가 발생했습니다.')
     }
     
     setIsUpdating(false)
@@ -174,7 +176,7 @@ export default function MyPage() {
           </div>
 
           {reports.length > 3 && (
-            <button className="w-full mt-4 p-3 border border-slate-200 text-slate-600 font-bold rounded-lg hover:bg-slate-50 transition-colors" onClick={() => alert('더보기 기능은 추후 구현 예정입니다.')}>
+            <button className="w-full mt-4 p-3 border border-slate-200 text-slate-600 font-bold rounded-lg hover:bg-slate-50 transition-colors" onClick={() => toast.info('더보기 기능은 추후 구현 예정입니다.')}>
               더보기
             </button>
           )}

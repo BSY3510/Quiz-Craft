@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
 import { updateQuestion, setGoogleLogin } from '../actions'
+import { useToast } from '@/app/components/Toast'
 import type { AdminQuestionRow, Category } from '@/types/db'
 
 type DashQuestion = AdminQuestionRow & { errorRate: number; totalAttempts: number }
@@ -12,6 +13,7 @@ type DashQuestion = AdminQuestionRow & { errorRate: number; totalAttempts: numbe
 export default function AdminDashboardStatsPage() {
   const supabase = createClient()
   const adminPath = useAdminPath()
+  const toast = useToast()
 
   const [questions, setQuestions] = useState<DashQuestion[]>([])
   const [categories, setCategories] = useState<Pick<Category, 'id' | 'name'>[]>([])
@@ -56,9 +58,9 @@ export default function AdminDashboardStatsPage() {
   const handleToggleGoogleLogin = async () => {
     const newValue = !isGoogleEnabled
     const res = await setGoogleLogin(newValue)
-    if (res.error) return alert(res.error)
+    if (res.error) { toast.error(res.error); return }
     setIsGoogleEnabled(newValue)
-    alert(`구글 로그인이 ${newValue ? '활성화' : '비활성화'} 되었습니다.`)
+    toast.success(`구글 로그인이 ${newValue ? '활성화' : '비활성화'} 되었습니다.`)
   }
 
   const handleSaveEdit = async () => {
@@ -66,11 +68,11 @@ export default function AdminDashboardStatsPage() {
     const { id, question_text, options, answer_id, explanation } = editingQuestion
 
     const res = await updateQuestion(id, { question_text, options, answer_id, explanation })
-    if (res.error) return alert(res.error)
+    if (res.error) { toast.error(res.error); return }
 
     setQuestions(questions.map(q => q.id === id ? { ...q, question_text, options, answer_id, explanation } : q))
     setEditingQuestion(null)
-    alert('수정되었습니다.')
+    toast.success('수정되었습니다.')
   }
 
   // 필터링 및 정렬 파이프라인

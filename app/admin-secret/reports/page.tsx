@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
 import { updateReportStatus } from './actions'
 import { updateQuestion } from '../actions'
+import { useToast } from '@/app/components/Toast'
 import type { Question, Category } from '@/types/db'
 
 // 신고 목록 임베드된 문제(정답/해설은 제외, 수정 시점에만 채워짐)
@@ -23,6 +24,7 @@ type ReportRow = {
 export default function AdminReportsPage() {
   const supabase = createClient()
   const adminPath = useAdminPath()
+  const toast = useToast()
 
   const [reports, setReports] = useState<ReportRow[]>([])
   const [categories, setCategories] = useState<Pick<Category, 'id' | 'name'>[]>([])
@@ -59,9 +61,9 @@ export default function AdminReportsPage() {
     const res = await updateReportStatus(reportId, newStatus)
     if (!res.error) {
       setReports(reports.map(r => r.id === reportId ? { ...r, status: newStatus } : r))
-      alert(`상태가 '${newStatus === 'resolved' ? '수정 완료' : '반려'}'로 변경되었습니다.`)
+      toast.success(`상태가 '${newStatus === 'resolved' ? '수정 완료' : '반려'}'로 변경되었습니다.`)
     } else {
-      alert(res.error)
+      toast.error(res.error)
     }
   }
 
@@ -70,7 +72,7 @@ export default function AdminReportsPage() {
     const { data, error } = await supabase.rpc('get_question_admin', { p_id: questionId })
     const full = Array.isArray(data) ? data[0] : data
     if (error || !full) {
-      alert('문제 정보를 불러오지 못했습니다.')
+      toast.error('문제 정보를 불러오지 못했습니다.')
       return
     }
     setEditingQuestion(full)
@@ -83,9 +85,9 @@ export default function AdminReportsPage() {
     if (!res.error) {
       setReports(reports.map(r => r.questions?.id === id ? { ...r, questions: { ...r.questions, question_text, options, answer_id, explanation } } : r))
       setEditingQuestion(null)
-      alert('문제가 수정되었습니다!')
+      toast.success('문제가 수정되었습니다!')
     } else {
-      alert(res.error)
+      toast.error(res.error)
     }
   }
 

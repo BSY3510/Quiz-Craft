@@ -5,10 +5,12 @@ import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
 import { setSystemPrompt } from '../actions'
+import { useToast } from '@/app/components/Toast'
 
 export default function AdminPromptPage() {
   const supabase = createClient()
   const adminPath = useAdminPath()
+  const toast = useToast()
 
   const [prompt, setPrompt] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -34,9 +36,9 @@ export default function AdminPromptPage() {
     setIsSaving(true)
     const res = await setSystemPrompt(prompt)
     if (!res.error) {
-      alert('AI 프롬프트가 성공적으로 저장되었습니다!')
+      toast.success('AI 프롬프트가 성공적으로 저장되었습니다!')
     } else {
-      alert(`저장 중 오류가 발생했습니다: ${res.error}`)
+      toast.error(`저장 중 오류가 발생했습니다: ${res.error}`)
     }
     setIsSaving(false)
   }

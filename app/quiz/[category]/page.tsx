@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { submitReport } from '@/app/actions/report' // ✅ 신고 서버 액션 추가
+import { useToast } from '@/app/components/Toast'
 
 // ✅ 정답(answer_id)과 해설(explanation)은 클라이언트로 받지 않는다(SEC-A).
 //    제출 후 서버 채점 결과(GradeResult)로만 노출된다.
@@ -28,6 +29,7 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
 
   const router = useRouter()
   const supabase = createClient()
+  const toast = useToast()
 
   const [questions, setQuestions] = useState<Question[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -107,7 +109,7 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
 
     if (error || !data) {
       console.error('grade_and_award error:', error)
-      alert('채점 처리 중 오류가 발생했습니다. 다시 시도해 주세요.')
+      toast.error('채점 처리 중 오류가 발생했습니다. 다시 시도해 주세요.')
       return
     }
 
@@ -132,18 +134,18 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
 
   // ✅ 신고 접수 핸들러
   const handleReportSubmit = async () => {
-    if (!reportReason.trim()) return alert('신고 사유를 입력해 주세요.')
+    if (!reportReason.trim()) { toast.error('신고 사유를 입력해 주세요.'); return }
 
     setIsSubmittingReport(true)
     const result = await submitReport(currentQuestion.id, reportReason)
     setIsSubmittingReport(false)
 
     if (result.success) {
-      alert('신고가 정상적으로 접수되었습니다. 소중한 의견 감사합니다!')
+      toast.success('신고가 정상적으로 접수되었습니다. 소중한 의견 감사합니다!')
       setIsReportModalOpen(false)
       setReportReason('')
     } else {
-      alert(`오류: ${result.error}`)
+      toast.error(`오류: ${result.error}`)
     }
   }
 

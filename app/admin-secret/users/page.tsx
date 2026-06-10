@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
+import { useToast } from '@/app/components/Toast'
 import type { Profile } from '@/types/db'
 
 export default function AdminUsersManagementPage() {
   const supabase = createClient()
   const adminPath = useAdminPath()
+  const toast = useToast()
 
   const [users, setUsers] = useState<Profile[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -38,10 +40,10 @@ export default function AdminUsersManagementPage() {
 
     if (!error) {
       setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus as Profile['status'] } : u))
-      alert('회원 상태가 성공적으로 반영되었습니다. 새로고침해도 유지됩니다.')
+      toast.success('회원 상태가 반영되었습니다.')
     } else {
       console.error(error)
-      alert('상태 변경 실패: 관리자 권한 및 SQL 정책을 확인하세요.')
+      toast.error('상태 변경 실패: 관리자 권한 및 정책을 확인하세요.')
     }
   }
 
