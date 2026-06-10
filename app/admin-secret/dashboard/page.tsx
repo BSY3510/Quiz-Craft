@@ -7,6 +7,8 @@ import { useAdminPath } from '../useAdminPath'
 import { updateQuestion, setGoogleLogin } from '../actions'
 import { useToast } from '@/app/components/Toast'
 import { Modal } from '@/app/components/Modal'
+import { Pagination } from '@/app/components/Pagination'
+import { Badge, statusTone } from '@/app/components/ui'
 import type { AdminQuestionRow, Category } from '@/types/db'
 
 type DashQuestion = AdminQuestionRow & { errorRate: number; totalAttempts: number }
@@ -164,7 +166,7 @@ export default function AdminDashboardStatsPage() {
                         <span className="text-xs text-slate-400 block">총 {q.totalAttempts}회 풀이</span>
                       </td>
                       <td className="p-4">
-                        <span className={`px-2 py-1 text-xs font-bold rounded ${q.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{q.status}</span>
+                        <Badge tone={statusTone(q.status)}>{q.status}</Badge>
                       </td>
                     </tr>
                   ))}
@@ -174,20 +176,8 @@ export default function AdminDashboardStatsPage() {
           )}
         </div>
 
-        {/* ✅ 대시보드 10개 단위 하단 조작 버튼 컴포넌트 이식 */}
-        {totalPages > 1 && (
-          <div className="flex justify-center gap-2 mt-6">
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button 
-                key={i} 
-                onClick={() => setCurrentPage(i + 1)} 
-                className={`w-10 h-10 rounded-lg font-bold text-sm transition-colors ${currentPage === i + 1 ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* 페이지네이션 (prev/next + 생략) */}
+        <Pagination page={currentPage} totalPages={totalPages} onChange={setCurrentPage} />
       </div>
 
       {/* 문제 수정 모달 */}

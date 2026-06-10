@@ -8,6 +8,8 @@ import { updateReportStatus } from './actions'
 import { updateQuestion } from '../actions'
 import { useToast } from '@/app/components/Toast'
 import { Modal } from '@/app/components/Modal'
+import { Pagination } from '@/app/components/Pagination'
+import { Badge, statusTone } from '@/app/components/ui'
 import type { Question, Category } from '@/types/db'
 
 // 신고 목록 임베드된 문제(정답/해설은 제외, 수정 시점에만 채워짐)
@@ -148,9 +150,7 @@ export default function AdminReportsPage() {
                 <div key={report.id} className="p-6 hover:bg-slate-50 transition-colors">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 text-xs font-bold rounded-lg ${report.status === 'resolved' ? 'bg-green-100 text-green-700' : report.status === 'dismissed' ? 'bg-slate-200 text-slate-700' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {report.status}
-                      </span>
+                      <Badge tone={statusTone(report.status)} className="px-3 py-1 rounded-lg">{report.status}</Badge>
                       <span className="text-sm font-bold text-slate-400">{new Date(report.created_at).toLocaleString()}</span>
                     </div>
                     {report.status === 'pending' && (
@@ -179,20 +179,8 @@ export default function AdminReportsPage() {
           )}
         </div>
 
-        {/* ✅ 페이지네이션 버튼 UI */}
-        {totalPages > 1 && (
-          <div className="flex justify-center gap-2 mt-6">
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button 
-                key={i} 
-                onClick={() => setCurrentPage(i + 1)} 
-                className={`w-10 h-10 rounded-lg font-bold transition-colors ${currentPage === i + 1 ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* 페이지네이션 (prev/next + 생략) */}
+        <Pagination page={currentPage} totalPages={totalPages} onChange={setCurrentPage} />
       </div>
 
       {/* 문제 수정 모달 */}

@@ -8,6 +8,7 @@ import type { User } from '@supabase/supabase-js'
 import DeactivateButton from './DeactivateButton'
 import { updateNickname } from './actions'
 import { useToast } from '@/app/components/Toast'
+import { Badge, statusTone } from '@/app/components/ui'
 import type { Profile } from '@/types/db'
 
 type MyReport = {
@@ -163,9 +164,7 @@ export default function MyPage() {
               recentReports.map((report) => (
                 <div key={report.id} className="p-4 bg-slate-50 rounded-lg border border-slate-100">
                   <div className="flex justify-between items-start mb-2">
-                    <span className={`px-2 py-1 text-xs font-bold rounded ${report.status === 'resolved' ? 'bg-green-100 text-green-700' : report.status === 'dismissed' ? 'bg-slate-200 text-slate-700' : 'bg-yellow-100 text-yellow-800'}`}>
-                      {report.status}
-                    </span>
+                    <Badge tone={statusTone(report.status)}>{report.status}</Badge>
                     <span className="text-xs text-slate-400">{new Date(report.created_at).toLocaleDateString()}</span>
                   </div>
                   <p className="text-sm font-medium text-slate-800 truncate mb-1">Q. {report.questions?.question_text}</p>
