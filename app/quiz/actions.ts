@@ -2,74 +2,29 @@
 
 import { createClient } from '@/utils/supabase/server'
 
-export async function saveAttempt(questionId: string, selectedOptionId: string, isCorrect: boolean) {
+// 서버 권위 채점(SEC-A/B/E/F): 클라이언트는 (questionId, selectedOptionId)만 보낸다.
+// 정답 비교·기록·원자적 XP 적립·파밍 차단·KST 스트릭은 DB 함수 grade_and_award가 처리.
+export async function submitAnswer(questionId: string, selectedOptionId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return { error: '로그인이 필요한 기능입니다.' }
 
-  // 1. 기존 풀이 이력 확인 (처음 푸는 문제인지, 다시 푸는 문제인지 검사)
-  const { data: previousAttempts } = await supabase
-    .from('attempts')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('question_id', questionId)
-    .limit(1)
+  const { data, error } = await supabase.rpc('grade_and_award', {
+    p_question_id: questionId,
+    p_selected_option_id: selectedOptionId,
+  })
 
-  const isRetry = previousAttempts && previousAttempts.length > 0
-
-  // 2. 새로운 Attempt 기록 저장
-  const { error: attemptError } = await supabase
-    .from('attempts')
-    .insert({
-      user_id: user.id,
-      question_id: questionId,
-      selected_option_id: selectedOptionId,
-      is_correct: isCorrect,
-    })
-
-  if (attemptError) return { error: '풀이 기록 저장 실패' }
-
-  // 3. 정답일 경우 게이미피케이션(XP 및 스트릭) 업데이트 처리 [cite: 239, 240]
-  if (isCorrect) {
-    const today = new Date().toISOString().split('T')[0] 
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('xp, current_streak, last_active_date')
-      .eq('id', user.id)
-      .single()
-
-    if (profile) {
-      let newStreak = profile.current_streak
-      
-      // ✅ 요구사항 반영: 새로운 문제는 10 XP, 다시 푸는 문제는 5 XP 부여
-      let newXp = profile.xp + (isRetry ? 5 : 10)
-
-      if (profile.last_active_date !== today) {
-        const yesterday = new Date()
-        yesterday.setDate(yesterday.getDate() - 1)
-        const yesterdayStr = yesterday.toISOString().split('T')[0]
-
-        if (profile.last_active_date === yesterdayStr) {
-          newStreak += 1
-          // 스트릭 보너스 추가
-          newXp += Math.min(newStreak * 2, 20) 
-        } else {
-          newStreak = 1
-        }
-      }
-
-      await supabase
-        .from('profiles')
-        .update({
-          xp: newXp,
-          current_streak: newStreak,
-          last_active_date: today
-        })
-        .eq('id', user.id)
-    }
+  if (error || !data) {
+    console.error('grade_and_award error:', error)
+    return { error: '채점 처리 중 오류가 발생했습니다.' }
   }
 
-  return { success: true }
+  // data: { is_correct, answer_id, explanation, xp_awarded } (제출 후이므로 정답 노출 안전)
+  return {
+    isCorrect: Boolean(data.is_correct),
+    answerId: String(data.answer_id),
+    explanation: String(data.explanation ?? ''),
+    xpAwarded: Number(data.xp_awarded ?? 0),
+  }
 }

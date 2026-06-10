@@ -14,36 +14,11 @@ export default async function CategoryReviewPage({ params }: { params: Promise<{
 
   if (!user) redirect('/login')
 
-  // ✅ questions 테이블을 inner join 하여 해당 카테고리의 오답만 가져오기
-  const { data: attempts } = await supabase
-    .from('attempts')
-    .select(`
-      id,
-      created_at,
-      questions!inner (
-        id,
-        category_id,
-        question_text,
-        code_snippet,
-        options,
-        answer_id,
-        explanation
-      )
-    `)
-    .eq('user_id', user.id)
-    .eq('is_correct', false)
-    .eq('questions.category_id', categoryId)
-    .order('created_at', { ascending: false })
-
-  // 중복 문제 제거 (가장 최근에 틀린 문제 1개만 노출)
-  const uniqueQuestionsMap = new Map()
-  attempts?.forEach((attempt: any) => {
-    if (attempt.questions && !uniqueQuestionsMap.has(attempt.questions.id)) {
-      uniqueQuestionsMap.set(attempt.questions.id, attempt.questions)
-    }
-  })
-  
-  const incorrectQuestions = Array.from(uniqueQuestionsMap.values())
+  // ✅ 정답/해설은 일반 사용자 select에서 회수되므로(SEC-A), 정의자 함수로 조회.
+  //    함수가 해당 카테고리의 오답 문제를 중복 제거·최근순으로 반환한다.
+  const { data } = await supabase
+    .rpc('get_incorrect_questions', { p_category: categoryId })
+  const incorrectQuestions = data ?? []
 
   return (
     <main className="flex min-h-screen flex-col bg-slate-50 md:items-center p-4 pt-8">
