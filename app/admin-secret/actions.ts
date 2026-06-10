@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { checkAdmin } from '@/utils/auth'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { revalidatePath } from 'next/cache'
 
@@ -111,4 +112,58 @@ export async function saveReviewedQuestions(questions: any[]) {
     console.error('Save to DB Error:', error)
     return { success: false, error: 'DB 등록 중 오류가 발생했습니다.' }
   }
+}
+
+// 3. 문제 수정 (대시보드/신고 화면 공용)
+export async function updateQuestion(
+  id: string,
+  fields: { question_text: string; options: unknown; answer_id: string; explanation: string }
+) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('questions')
+    .update({
+      question_text: fields.question_text,
+      options: fields.options,
+      answer_id: fields.answer_id,
+      explanation: fields.explanation,
+    })
+    .eq('id', id)
+
+  if (error) return { error: '문제 수정 중 오류가 발생했습니다.' }
+  revalidatePath('/quiz')
+  return { success: true }
+}
+
+// 4. 구글 로그인 토글 (site_settings)
+export async function setGoogleLogin(enabled: boolean) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('site_settings')
+    .update({ google_login_enabled: enabled })
+    .eq('id', 1)
+
+  if (error) return { error: '설정 변경 중 오류가 발생했습니다.' }
+  return { success: true }
+}
+
+// 5. AI 시스템 프롬프트 저장 (site_settings)
+export async function setSystemPrompt(prompt: string) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('site_settings')
+    .update({ system_prompt: prompt })
+    .eq('id', 1)
+
+  if (error) return { error: '프롬프트 저장 중 오류가 발생했습니다.' }
+  return { success: true }
 }

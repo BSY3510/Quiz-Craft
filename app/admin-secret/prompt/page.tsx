@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { setSystemPrompt } from '../actions'
 
 export default function AdminPromptPage() {
   const supabase = createClient()
@@ -32,16 +33,11 @@ export default function AdminPromptPage() {
 
   const handleSavePrompt = async () => {
     setIsSaving(true)
-    const { error } = await supabase
-      .from('site_settings')
-      .update({ system_prompt: prompt })
-      .eq('id', 1)
-
-    if (!error) {
+    const res = await setSystemPrompt(prompt)
+    if (!res.error) {
       alert('AI 프롬프트가 성공적으로 저장되었습니다!')
     } else {
-      alert('저장 중 오류가 발생했습니다.')
-      console.error(error)
+      alert(`저장 중 오류가 발생했습니다: ${res.error}`)
     }
     setIsSaving(false)
   }

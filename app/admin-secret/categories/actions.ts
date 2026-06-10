@@ -1,72 +1,72 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { checkAdmin } from '@/utils/auth'
 import { revalidatePath } from 'next/cache'
 
-export async function addCategory(formData: FormData) {
-  // ✅ await 추가됨
-  const supabase = await createClient() 
-  const { data: { user } } = await supabase.auth.getUser()
+// 분야 생성
+export async function createCategory(id: string, name: string) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
 
-  if (!user) return { error: '인증이 필요합니다.' }
+  const cleanId = id.toLowerCase().trim()
+  const cleanName = name.trim()
+  if (!cleanId || !cleanName) return { error: '식별 ID와 분야명을 입력해 주세요.' }
 
-  // 관리자 권한 검증
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.role !== 'admin') {
-    return { error: '관리자 권한이 없습니다.' }
-  }
-
-  const id = formData.get('id') as string
-  const name = formData.get('name') as string
-
+  const supabase = await createClient()
   const { error } = await supabase
     .from('categories')
-    .insert({
-      id: id.toLowerCase().trim(),
-      name: name.trim(),
-      active: true
-    })
+    .insert({ id: cleanId, name: cleanName, active: true })
 
-  if (error) {
-    return { error: '분야 추가 중 오류가 발생했습니다. (ID 중복 등)' }
-  }
-
-  revalidatePath('/admin-secret/categories')
+  if (error) return { error: '분야 추가 중 오류가 발생했습니다. (ID 중복 등)' }
+  revalidatePath('/quiz')
   return { success: true }
 }
 
-export async function toggleCategoryStatus(categoryId: string, currentStatus: boolean) {
-  // ✅ await 추가됨 (에러 발생 원인 해결)
-  const supabase = await createClient() 
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: '인증이 필요합니다.' }
+// 분야 활성/비활성 토글
+export async function toggleCategoryActive(id: string, currentActive: boolean) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
 
-  // 보안을 위한 관리자 권한 검증 추가
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.role !== 'admin') {
-    return { error: '관리자 권한이 없습니다.' }
-  }
-  
+  const supabase = await createClient()
   const { error } = await supabase
     .from('categories')
-    .update({ active: !currentStatus })
-    .eq('id', categoryId)
+    .update({ active: !currentActive })
+    .eq('id', id)
 
-  if (error) {
-    return { error: '상태 변경 중 오류가 발생했습니다.' }
-  }
+  if (error) return { error: '상태 변경 중 오류가 발생했습니다.' }
+  revalidatePath('/quiz')
+  return { success: true }
+}
 
-  revalidatePath('/admin-secret/categories')
+// 분야명 수정
+export async function updateCategoryName(id: string, name: string) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
+
+  const cleanName = name.trim()
+  if (!cleanName) return { error: '분야명을 입력해 주세요.' }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('categories')
+    .update({ name: cleanName })
+    .eq('id', id)
+
+  if (error) return { error: '수정 중 오류가 발생했습니다.' }
+  revalidatePath('/quiz')
+  return { success: true }
+}
+
+// 분야 삭제
+export async function deleteCategory(id: string) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
+
+  const supabase = await createClient()
+  const { error } = await supabase.from('categories').delete().eq('id', id)
+
+  if (error) return { error: '삭제 실패: 데이터베이스 제약 조건 또는 오류가 발생했습니다.' }
+  revalidatePath('/quiz')
   return { success: true }
 }

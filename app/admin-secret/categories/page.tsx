@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { createCategory, toggleCategoryActive, updateCategoryName, deleteCategory } from './actions'
 
 export default function AdminCategoriesPage() {
   const supabase = createClient()
@@ -38,29 +39,24 @@ export default function AdminCategoriesPage() {
     e.preventDefault()
     if (!newId.trim() || !newName.trim()) return
 
-    const { error } = await supabase
-      .from('categories')
-      .insert({ id: newId.toLowerCase().trim(), name: newName.trim(), active: true })
-
-    if (!error) {
+    const res = await createCategory(newId, newName)
+    if (!res.error) {
       alert('새로운 분야가 등록되었습니다.')
       setNewId('')
       setNewName('')
       fetchCategories()
     } else {
-      alert('등록 실패: 중복된 ID이거나 오류가 발생했습니다.')
+      alert(`등록 실패: ${res.error}`)
     }
   }
 
   // 2. 분야 활성/비활성 토글
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
-    const { error } = await supabase
-      .from('categories')
-      .update({ active: !currentStatus })
-      .eq('id', id)
-
-    if (!error) {
+    const res = await toggleCategoryActive(id, currentStatus)
+    if (!res.error) {
       setCategories(categories.map(c => c.id === id ? { ...c, active: !currentStatus } : c))
+    } else {
+      alert(res.error)
     }
   }
 
@@ -68,17 +64,13 @@ export default function AdminCategoriesPage() {
   const handleSaveEdit = async () => {
     if (!editingCategory || !editingCategory.name.trim()) return
 
-    const { error } = await supabase
-      .from('categories')
-      .update({ name: editingCategory.name.trim() })
-      .eq('id', editingCategory.id)
-
-    if (!error) {
+    const res = await updateCategoryName(editingCategory.id, editingCategory.name)
+    if (!res.error) {
       alert('분야명이 수정되었습니다.')
       setEditingCategory(null)
       fetchCategories()
     } else {
-      alert('수정 중 오류가 발생했습니다.')
+      alert(`수정 중 오류가 발생했습니다: ${res.error}`)
     }
   }
 
@@ -86,16 +78,12 @@ export default function AdminCategoriesPage() {
   const handleDeleteCategory = async (id: string) => {
     if (!confirm(`⚠️ 정말로 [${id}] 분야를 완전히 삭제하시겠습니까?\n삭제 시 해당 분야의 카테고리 정보가 증발합니다.`)) return
 
-    const { error } = await supabase
-      .from('categories')
-      .delete()
-      .eq('id', id)
-
-    if (!error) {
+    const res = await deleteCategory(id)
+    if (!res.error) {
       alert('분야가 성공적으로 삭제되었습니다.')
       fetchCategories()
     } else {
-      alert('삭제 실패: 데이터베이스 제약 조건 또는 오류가 발생했습니다.')
+      alert(`삭제 실패: ${res.error}`)
     }
   }
 

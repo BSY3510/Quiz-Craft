@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { updateQuestion, setGoogleLogin } from '../actions'
 
 export default function AdminDashboardStatsPage() {
   const supabase = createClient()
@@ -52,7 +53,8 @@ export default function AdminDashboardStatsPage() {
 
   const handleToggleGoogleLogin = async () => {
     const newValue = !isGoogleEnabled
-    await supabase.from('site_settings').update({ google_login_enabled: newValue }).eq('id', 1)
+    const res = await setGoogleLogin(newValue)
+    if (res.error) return alert(res.error)
     setIsGoogleEnabled(newValue)
     alert(`구글 로그인이 ${newValue ? '활성화' : '비활성화'} 되었습니다.`)
   }
@@ -60,11 +62,10 @@ export default function AdminDashboardStatsPage() {
   const handleSaveEdit = async () => {
     if (!editingQuestion) return
     const { id, question_text, options, answer_id, explanation } = editingQuestion
-    
-    await supabase.from('questions')
-      .update({ question_text, options, answer_id, explanation })
-      .eq('id', id)
-      
+
+    const res = await updateQuestion(id, { question_text, options, answer_id, explanation })
+    if (res.error) return alert(res.error)
+
     setQuestions(questions.map(q => q.id === id ? { ...q, question_text, options, answer_id, explanation } : q))
     setEditingQuestion(null)
     alert('수정되었습니다.')

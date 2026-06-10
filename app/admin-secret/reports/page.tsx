@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { updateReportStatus } from './actions'
+import { updateQuestion } from '../actions'
 
 export default function AdminReportsPage() {
   const supabase = createClient()
@@ -41,10 +43,12 @@ export default function AdminReportsPage() {
   }, [supabase])
 
   const handleUpdateStatus = async (reportId: string, newStatus: string) => {
-    const { error } = await supabase.from('reports').update({ status: newStatus }).eq('id', reportId)
-    if (!error) {
+    const res = await updateReportStatus(reportId, newStatus)
+    if (!res.error) {
       setReports(reports.map(r => r.id === reportId ? { ...r, status: newStatus } : r))
       alert(`상태가 '${newStatus === 'resolved' ? '수정 완료' : '반려'}'로 변경되었습니다.`)
+    } else {
+      alert(res.error)
     }
   }
 
@@ -62,11 +66,13 @@ export default function AdminReportsPage() {
   const handleSaveEdit = async () => {
     if (!editingQuestion) return
     const { id, question_text, options, answer_id, explanation } = editingQuestion
-    const { error } = await supabase.from('questions').update({ question_text, options, answer_id, explanation }).eq('id', id)
-    if (!error) {
+    const res = await updateQuestion(id, { question_text, options, answer_id, explanation })
+    if (!res.error) {
       setReports(reports.map(r => r.questions?.id === id ? { ...r, questions: { ...r.questions, question_text, options, answer_id, explanation } } : r))
       setEditingQuestion(null)
       alert('문제가 수정되었습니다!')
+    } else {
+      alert(res.error)
     }
   }
 
