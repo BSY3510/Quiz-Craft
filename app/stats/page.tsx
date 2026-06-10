@@ -25,7 +25,7 @@ export default async function StatsPage() {
     .eq('active', true)
 
   // 2. 현재 사용자의 모든 풀이 기록(Attempt)과 연관된 문제의 카테고리 정보 가져오기
-  const { data: attemptsData, error } = await supabase
+  const { data: attemptsData } = await supabase
     .from('attempts')
     .select(`
       is_correct,

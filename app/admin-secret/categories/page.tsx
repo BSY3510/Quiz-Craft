@@ -3,21 +3,21 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useAdminPath } from '../useAdminPath'
 import { createCategory, toggleCategoryActive, updateCategory, deleteCategory } from './actions'
+import type { Category } from '@/types/db'
 
 export default function AdminCategoriesPage() {
   const supabase = createClient()
-  const pathname = usePathname()
-  const adminPath = pathname.split('/').slice(0, 2).join('/')
+  const adminPath = useAdminPath()
 
-  const [categories, setCategories] = useState<any[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   // 등록/수정 폼 상태 관리
   const [newId, setNewId] = useState('')
   const [newName, setNewName] = useState('')
-  const [editingCategory, setEditingCategory] = useState<any>(null)
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [search, setSearch] = useState('')
 
   // 검색 필터 (식별 ID 또는 분야명)

@@ -3,16 +3,14 @@
 import { useState, useEffect } from 'react'
 import { runAutoPipeline } from './actions'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation' // ✅ 현재 경로를 읽어오는 훅 추가
+import { useAdminPath } from '../useAdminPath'
 import { createClient } from '@/utils/supabase/client'
 
 interface Category { id: string; name: string; }
 
 export default function AutoPipelinePage() {
   const supabase = createClient()
-  const pathname = usePathname() // ex: /admin-secret_quiz_0603/auto-pipeline
-  // ✅ 환경변수 대신 현재 경로를 잘라서 안전하고 정확한 관리자 메인 주소 추출
-  const adminPath = pathname.split('/').slice(0, 2).join('/') 
+  const adminPath = useAdminPath()
 
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(false)

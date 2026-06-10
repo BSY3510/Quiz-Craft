@@ -4,16 +4,26 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import type { User } from '@supabase/supabase-js'
 import DeactivateButton from './DeactivateButton'
 import { updateNickname } from './actions'
+import type { Profile } from '@/types/db'
+
+type MyReport = {
+  id: string
+  reason: string
+  status: string
+  created_at: string
+  questions: { question_text: string } | null
+}
 
 export default function MyPage() {
   const supabase = createClient()
   const router = useRouter()
 
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
-  const [reports, setReports] = useState<any[]>([])
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [reports, setReports] = useState<MyReport[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const [nickname, setNickname] = useState('')
@@ -28,7 +38,7 @@ export default function MyPage() {
 
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
       if (prof) {
-        setProfile(prof)
+        setProfile(prof as Profile)
         setNickname(prof.nickname || '')
       }
 
@@ -38,7 +48,7 @@ export default function MyPage() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
       
-      if (reps) setReports(reps)
+      if (reps) setReports(reps as unknown as MyReport[])
       setIsLoading(false)
     }
     fetchMyData()
@@ -63,7 +73,7 @@ export default function MyPage() {
     if (isChanged) {
       alert('개인정보가 성공적으로 변경되었습니다!')
       setPassword('') 
-      setProfile({ ...profile, nickname }) // 화면 즉시 업데이트
+      setProfile(profile ? { ...profile, nickname } : profile) // 화면 즉시 업데이트
       
       // ✅ 가장 중요: Next.js 라우터 캐시를 강제로 새로고침하여 /quiz 이동 시 변경사항이 반영되게 함
       router.refresh()
@@ -148,7 +158,7 @@ export default function MyPage() {
             {recentReports.length === 0 ? (
               <p className="text-sm text-slate-400 text-center py-4">제출하신 신고 내역이 없습니다.</p>
             ) : (
-              recentReports.map((report: any) => (
+              recentReports.map((report) => (
                 <div key={report.id} className="p-4 bg-slate-50 rounded-lg border border-slate-100">
                   <div className="flex justify-between items-start mb-2">
                     <span className={`px-2 py-1 text-xs font-bold rounded ${report.status === 'resolved' ? 'bg-green-100 text-green-700' : report.status === 'dismissed' ? 'bg-slate-200 text-slate-700' : 'bg-yellow-100 text-yellow-800'}`}>

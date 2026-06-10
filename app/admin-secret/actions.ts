@@ -8,21 +8,10 @@ import { revalidatePath } from 'next/cache'
 
 // 1. AI 문제 초안 생성 서버 액션 (DB 연동 동적 프롬프트 적용)
 export async function generateQuizDraft(formData: FormData) {
-  const supabase = await createClient() 
-  const { data: { user } } = await supabase.auth.getUser()
+  const c = await checkAdmin()
+  if (!c.ok) return { success: false, error: c.error }
 
-  if (!user) return { success: false, error: '인증이 필요합니다.' }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.role !== 'admin') {
-    return { success: false, error: '관리자 권한이 없습니다.' }
-  }
-
+  const supabase = await createClient()
   const categoryId = formData.get('category') as string
   const count = parseInt(formData.get('count') as string, 10) || 3
 
@@ -66,11 +55,12 @@ export async function generateQuizDraft(formData: FormData) {
 
     // 선택한 분야를 함께 반환해 저장 시 일괄 적용
     return { success: true, data: generatedQuestions, category: categoryId }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Gemini API Error:', error)
 
-    const errorMessage = error.message?.toLowerCase() || ''
-    const status = error.status || error.response?.status
+    const err = error as { message?: string; status?: number; response?: { status?: number } }
+    const errorMessage = err.message?.toLowerCase() || ''
+    const status = err.status || err.response?.status
 
     if (status === 429 || errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('rate limit')) {
       return { success: false, error: '🚨 무료 토큰 한도를 초과했거나 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.' }
@@ -80,7 +70,7 @@ export async function generateQuizDraft(formData: FormData) {
       return { success: false, error: '🚨 설정된 AI 모델(버전)을 찾을 수 없습니다. 환경변수를 확인해 주세요.' }
     }
 
-    return { success: false, error: `문제 생성 중 오류가 발생했습니다: ${error.message || '알 수 없는 JSON 포맷 오류'}` }
+    return { success: false, error: `문제 생성 중 오류가 발생했습니다: ${err.message || '알 수 없는 JSON 포맷 오류'}` }
   }
 }
 

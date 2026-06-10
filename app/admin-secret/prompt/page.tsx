@@ -3,13 +3,12 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useAdminPath } from '../useAdminPath'
 import { setSystemPrompt } from '../actions'
 
 export default function AdminPromptPage() {
   const supabase = createClient()
-  const pathname = usePathname()
-  const adminPath = pathname.split('/').slice(0, 2).join('/')
+  const adminPath = useAdminPath()
 
   const [prompt, setPrompt] = useState('')
   const [isLoading, setIsLoading] = useState(true)

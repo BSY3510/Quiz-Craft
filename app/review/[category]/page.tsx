@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import type { Question } from '@/types/db'
 
 export default async function CategoryReviewPage({ params }: { params: Promise<{ category: string }> }) {
   // Next.js 15+ params Unwrapping
@@ -18,7 +19,7 @@ export default async function CategoryReviewPage({ params }: { params: Promise<{
   //    함수가 해당 카테고리의 오답 문제를 중복 제거·최근순으로 반환한다.
   const { data } = await supabase
     .rpc('get_incorrect_questions', { p_category: categoryId })
-  const incorrectQuestions = data ?? []
+  const incorrectQuestions: Question[] = (data ?? []) as Question[]
 
   return (
     <main className="flex min-h-screen flex-col bg-slate-50 md:items-center p-4 pt-8">
@@ -45,8 +46,8 @@ export default async function CategoryReviewPage({ params }: { params: Promise<{
           </div>
         ) : (
           <div className="space-y-6">
-            {incorrectQuestions.map((q: any, index: number) => {
-              const answerOption = q.options.find((opt: any) => opt.id === q.answer_id)
+            {incorrectQuestions.map((q, index) => {
+              const answerOption = q.options.find((opt) => opt.id === q.answer_id)
               
               return (
                 <div key={q.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">

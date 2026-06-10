@@ -3,14 +3,14 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useAdminPath } from '../useAdminPath'
+import type { Profile } from '@/types/db'
 
 export default function AdminUsersManagementPage() {
   const supabase = createClient()
-  const pathname = usePathname()
-  const adminPath = pathname.split('/').slice(0, 2).join('/')
+  const adminPath = useAdminPath()
 
-  const [users, setUsers] = useState<any[]>([])
+  const [users, setUsers] = useState<Profile[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'suspended'>('pending')
 
@@ -22,7 +22,8 @@ export default function AdminUsersManagementPage() {
         .select('*')
         .order('created_at', { ascending: false })
       
-      if (data) setUsers(data)
+      // Supabase 미생성 타입 환경: enum 컬럼이 string으로 추론되므로 경계에서 캐스트
+      if (data) setUsers(data as Profile[])
       setIsLoading(false)
     }
     fetchUsers()
@@ -36,7 +37,7 @@ export default function AdminUsersManagementPage() {
       .rpc('admin_set_user_status', { p_target: userId, p_status: newStatus })
 
     if (!error) {
-      setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u))
+      setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus as Profile['status'] } : u))
       alert('회원 상태가 성공적으로 반영되었습니다. 새로고침해도 유지됩니다.')
     } else {
       console.error(error)

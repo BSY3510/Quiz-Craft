@@ -3,23 +3,25 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useAdminPath } from '../useAdminPath'
 import { updateQuestion, setGoogleLogin } from '../actions'
+import type { AdminQuestionRow, Category } from '@/types/db'
+
+type DashQuestion = AdminQuestionRow & { errorRate: number; totalAttempts: number }
 
 export default function AdminDashboardStatsPage() {
   const supabase = createClient()
-  const pathname = usePathname()
-  const adminPath = pathname.split('/').slice(0, 2).join('/') 
+  const adminPath = useAdminPath()
 
-  const [questions, setQuestions] = useState<any[]>([])
-  const [categories, setCategories] = useState<any[]>([])
+  const [questions, setQuestions] = useState<DashQuestion[]>([])
+  const [categories, setCategories] = useState<Pick<Category, 'id' | 'name'>[]>([])
   const [filterCategory, setFilterCategory] = useState<string>('all')
   const [sortType, setSortType] = useState<string>('recent')
   const [isLoading, setIsLoading] = useState(true)
-  
+
   // 소셜 설정 및 모달 관리 상태
   const [isGoogleEnabled, setIsGoogleEnabled] = useState(false)
-  const [editingQuestion, setEditingQuestion] = useState<any>(null)
+  const [editingQuestion, setEditingQuestion] = useState<DashQuestion | null>(null)
 
   // ✅ 페이지네이션 전용 로컬 상태 추가
   const [currentPage, setCurrentPage] = useState(1)
@@ -38,7 +40,7 @@ export default function AdminDashboardStatsPage() {
       const { data: qData } = await supabase.rpc('get_questions_admin')
 
       if (qData) {
-        const enrichedQuestions = qData.map((q: any) => {
+        const enrichedQuestions: DashQuestion[] = (qData as AdminQuestionRow[]).map((q) => {
           const totalAttempts = Number(q.total_attempts) || 0
           const correctAttempts = Number(q.correct_attempts) || 0
           const errorRate = totalAttempts === 0 ? 0 : ((totalAttempts - correctAttempts) / totalAttempts) * 100
@@ -85,10 +87,9 @@ export default function AdminDashboardStatsPage() {
   const totalPages = Math.ceil(filteredAndSorted.length / itemsPerPage)
   const paginatedQuestions = filteredAndSorted.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
-  // 조건 필터가 변경되면 사용자의 혼란을 방지하기 위해 1페이지로 강제 리셋
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [filterCategory, sortType])
+  // 필터/정렬 변경 시 1페이지로 리셋하는 핸들러 (effect 대신 이벤트에서 처리)
+  const onFilterCategory = (v: string) => { setFilterCategory(v); setCurrentPage(1) }
+  const onSortType = (v: string) => { setSortType(v); setCurrentPage(1) }
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 relative">
@@ -118,14 +119,14 @@ export default function AdminDashboardStatsPage() {
         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex gap-4">
           <div className="flex-1">
             <label className="block text-xs font-bold text-slate-500 mb-1">분야 필터</label>
-            <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full p-2 border rounded-lg text-sm text-slate-800">
+            <select value={filterCategory} onChange={(e) => onFilterCategory(e.target.value)} className="w-full p-2 border rounded-lg text-sm text-slate-800">
               <option value="all">전체 분야</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="flex-1">
             <label className="block text-xs font-bold text-slate-500 mb-1">정렬 방식</label>
-            <select value={sortType} onChange={(e) => setSortType(e.target.value)} className="w-full p-2 border rounded-lg text-sm text-slate-800">
+            <select value={sortType} onChange={(e) => onSortType(e.target.value)} className="w-full p-2 border rounded-lg text-sm text-slate-800">
               <option value="recent">최신 등록순</option>
               <option value="errorRate">🔥 오답률 높은 순</option>
               <option value="type">문제 종류순</option>
@@ -196,7 +197,7 @@ export default function AdminDashboardStatsPage() {
               <textarea value={editingQuestion.question_text} onChange={(e) => setEditingQuestion({...editingQuestion, question_text: e.target.value})} className="w-full p-3 border border-slate-300 rounded-lg text-slate-800" rows={2} />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              {editingQuestion.options.map((opt: any, idx: number) => (
+              {editingQuestion.options.map((opt, idx) => (
                 <div key={opt.id}>
                   <label className="block text-xs font-bold text-slate-500 mb-1">보기 {opt.id}</label>
                   <input value={opt.text} onChange={(e) => { const newOptions = [...editingQuestion.options]; newOptions[idx].text = e.target.value; setEditingQuestion({...editingQuestion, options: newOptions}) }} className="w-full p-2 border border-slate-300 rounded-lg text-slate-800 text-sm" />
@@ -206,7 +207,7 @@ export default function AdminDashboardStatsPage() {
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">정답 ID (1~4)</label>
               <select value={editingQuestion.answer_id} onChange={(e) => setEditingQuestion({...editingQuestion, answer_id: e.target.value})} className="w-full p-3 border border-slate-300 rounded-lg text-slate-800">
-                {editingQuestion.options.map((opt: any) => <option key={opt.id} value={opt.id}>{opt.id}번 보기</option>)}
+                {editingQuestion.options.map((opt) => <option key={opt.id} value={opt.id}>{opt.id}번 보기</option>)}
               </select>
             </div>
             <div>

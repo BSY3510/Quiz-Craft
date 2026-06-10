@@ -53,7 +53,12 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
         .eq('status', 'active')
 
       if (!error && data) {
-        const shuffled = [...data].sort(() => Math.random() - 0.5)
+        // Fisher-Yates 셔플 (sort(()=>Math.random()-0.5)는 편향이 있어 교체)
+        const shuffled = [...data]
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+        }
         setQuestions(shuffled)
       }
       setIsLoading(false)

@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { generateQuizDraft, saveReviewedQuestions } from './actions' 
+import { generateQuizDraft, saveReviewedQuestions } from './actions'
+import type { NormalizedQuestion } from './questionSchema'
+import type { QuestionOption } from '@/types/db'
 
 interface Category { id: string; name: string; }
 
@@ -12,7 +14,7 @@ export default function AdminQuizGenerator() {
   const [isLoading, setIsLoading] = useState(false)
   
   // ✅ JSON 문자열 대신 객체 배열로 상태 관리 (시각적 UI 렌더링 용도)
-  const [drafts, setDrafts] = useState<any[]>([])
+  const [drafts, setDrafts] = useState<NormalizedQuestion[]>([])
   // 생성 시 선택한 분야(저장 시 일괄 적용)
   const [draftCategory, setDraftCategory] = useState<string>('')
 
@@ -42,10 +44,8 @@ export default function AdminQuizGenerator() {
   }
 
   // 배열 내 특정 인덱스의 데이터 수정 핸들러
-  const handleUpdateDraft = (index: number, field: string, value: any) => {
-    const newDrafts = [...drafts]
-    newDrafts[index][field] = value
-    setDrafts(newDrafts)
+  const handleUpdateDraft = (index: number, field: keyof NormalizedQuestion, value: string | QuestionOption[]) => {
+    setDrafts(prev => prev.map((d, i) => (i === index ? ({ ...d, [field]: value } as NormalizedQuestion) : d)))
   }
 
   const handleSaveToDB = async () => {
@@ -58,7 +58,7 @@ export default function AdminQuizGenerator() {
       } else {
         alert(`❌ 등록 실패: ${result.error}`)
       }
-    } catch (error) {
+    } catch {
       alert('저장 중 오류가 발생했습니다.')
     }
   }
@@ -117,7 +117,7 @@ export default function AdminQuizGenerator() {
                 
                 <p className="text-xs text-slate-400">보기 앞 동그라미를 클릭해 <span className="font-bold text-green-600">정답</span>을 지정하세요.</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {draft.options.map((opt: any, optIdx: number) => (
+                  {draft.options.map((opt, optIdx) => (
                     <div key={opt.id} className={`flex items-center gap-2 p-2 border rounded-lg ${draft.answer_id === opt.id ? 'border-green-500 bg-green-50' : 'border-slate-300 bg-white'}`}>
                       {/* ✅ 정답 지정 버튼 (클릭 시 answer_id 변경) */}
                       <button

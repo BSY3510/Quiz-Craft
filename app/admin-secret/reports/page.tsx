@@ -3,22 +3,34 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useAdminPath } from '../useAdminPath'
 import { updateReportStatus } from './actions'
 import { updateQuestion } from '../actions'
+import type { Question, Category } from '@/types/db'
+
+// 신고 목록 임베드된 문제(정답/해설은 제외, 수정 시점에만 채워짐)
+type ReportQuestion =
+  Pick<Question, 'id' | 'category_id' | 'question_text' | 'code_snippet' | 'options'>
+  & Partial<Pick<Question, 'answer_id' | 'explanation'>>
+type ReportRow = {
+  id: string
+  reason: string
+  status: string
+  created_at: string
+  questions: ReportQuestion | null
+}
 
 export default function AdminReportsPage() {
   const supabase = createClient()
-  const pathname = usePathname()
-  const adminPath = pathname.split('/').slice(0, 2).join('/')
+  const adminPath = useAdminPath()
 
-  const [reports, setReports] = useState<any[]>([])
-  const [categories, setCategories] = useState<any[]>([])
+  const [reports, setReports] = useState<ReportRow[]>([])
+  const [categories, setCategories] = useState<Pick<Category, 'id' | 'name'>[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  
+
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterCategory, setFilterCategory] = useState<string>('all')
-  const [editingQuestion, setEditingQuestion] = useState<any>(null)
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null)
 
   // ✅ 페이지네이션 상태
   const [currentPage, setCurrentPage] = useState(1)
@@ -36,7 +48,8 @@ export default function AdminReportsPage() {
         .select(`id, reason, status, created_at, questions(id, category_id, question_text, code_snippet, options)`)
         .order('created_at', { ascending: false })
 
-      if (reps) setReports(reps)
+      // Supabase 중첩관계(questions)를 배열로 추론하므로 경계에서 캐스트(런타임은 단일 객체)
+      if (reps) setReports(reps as unknown as ReportRow[])
       setIsLoading(false)
     }
     fetchData()
@@ -87,8 +100,9 @@ export default function AdminReportsPage() {
   const totalPages = Math.ceil(filteredReports.length / itemsPerPage)
   const paginatedReports = filteredReports.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
-  // 필터 변경 시 무조건 1페이지로 이동
-  useEffect(() => { setCurrentPage(1) }, [filterStatus, filterCategory])
+  // 필터 변경 시 1페이지로 리셋 (effect 대신 이벤트에서 처리)
+  const onFilterStatus = (v: string) => { setFilterStatus(v); setCurrentPage(1) }
+  const onFilterCategory = (v: string) => { setFilterCategory(v); setCurrentPage(1) }
 
   return (
     <main className="min-h-screen bg-slate-50 p-6">
@@ -104,7 +118,7 @@ export default function AdminReportsPage() {
         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex gap-4">
           <div className="flex-1">
             <label className="block text-xs font-bold text-slate-500 mb-1">처리 상태 필터</label>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full p-2 border rounded-lg text-sm">
+            <select value={filterStatus} onChange={(e) => onFilterStatus(e.target.value)} className="w-full p-2 border rounded-lg text-sm">
               <option value="all">전체 상태</option>
               <option value="pending">대기 중</option>
               <option value="resolved">해결됨</option>
@@ -113,7 +127,7 @@ export default function AdminReportsPage() {
           </div>
           <div className="flex-1">
             <label className="block text-xs font-bold text-slate-500 mb-1">분야 필터</label>
-            <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full p-2 border rounded-lg text-sm">
+            <select value={filterCategory} onChange={(e) => onFilterCategory(e.target.value)} className="w-full p-2 border rounded-lg text-sm">
               <option value="all">전체 분야</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
@@ -151,7 +165,7 @@ export default function AdminReportsPage() {
                     <div className="bg-slate-100 p-4 rounded-xl border border-slate-200">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-xs font-bold text-slate-500 uppercase">분야: {report.questions.category_id}</span>
-                        <button onClick={() => handleOpenEdit(report.questions.id)} className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded">✏️ 문제 수정</button>
+                        <button onClick={() => report.questions && handleOpenEdit(report.questions.id)} className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded">✏️ 문제 수정</button>
                       </div>
                       <p className="font-bold text-slate-800">{report.questions.question_text}</p>
                     </div>
@@ -187,7 +201,7 @@ export default function AdminReportsPage() {
               <textarea value={editingQuestion.question_text} onChange={(e) => setEditingQuestion({...editingQuestion, question_text: e.target.value})} className="w-full p-3 border rounded-lg text-slate-800" rows={2}/>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              {editingQuestion.options.map((opt: any, idx: number) => (
+              {editingQuestion.options.map((opt, idx) => (
                 <div key={opt.id}>
                   <label className="block text-xs font-bold text-slate-500 mb-1">보기 {opt.id}</label>
                   <input value={opt.text} onChange={(e) => { const newOptions = [...editingQuestion.options]; newOptions[idx].text = e.target.value; setEditingQuestion({...editingQuestion, options: newOptions}) }} className="w-full p-3 border rounded-lg text-slate-800 text-sm"/>
@@ -197,7 +211,7 @@ export default function AdminReportsPage() {
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">정답 ID</label>
               <select value={editingQuestion.answer_id} onChange={(e) => setEditingQuestion({...editingQuestion, answer_id: e.target.value})} className="w-full p-3 border rounded-lg text-slate-800">
-                {editingQuestion.options.map((opt: any) => <option key={opt.id} value={opt.id}>{opt.id}번</option>)}
+                {editingQuestion.options.map((opt) => <option key={opt.id} value={opt.id}>{opt.id}번</option>)}
               </select>
             </div>
             <div>

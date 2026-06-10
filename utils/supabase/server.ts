@@ -18,7 +18,7 @@ export async function createClient() {
             cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options)
             })
-          } catch (error) {
+          } catch {
             // Server Component 렌더링 중에는 쿠키를 설정할 수 없습니다.
             // 미들웨어(middleware.ts)에서 세션 쿠키 관리를 병행하고 있으므로 
             // 이곳에서 발생하는 에러는 안전하게 무시할 수 있습니다.
