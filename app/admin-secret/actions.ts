@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { checkAdmin } from '@/utils/auth'
-import { buildPrompt, normalizeList, normalizeAndValidate, parseJsonLoose } from './questionSchema'
+import { buildPrompt, normalizeList, normalizeAndValidate, parseJsonLoose, QUESTION_RESPONSE_SCHEMA } from './questionSchema'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { revalidatePath } from 'next/cache'
 
@@ -45,13 +45,25 @@ export async function generateQuizDraft(formData: FormData) {
 
     const model = genAI.getGenerativeModel({
       model: modelName,
-      generationConfig: { responseMimeType: 'application/json' }
+      // 구조 강제 스키마로 무효 JSON 생성을 차단
+      generationConfig: { responseMimeType: 'application/json', responseSchema: QUESTION_RESPONSE_SCHEMA }
     })
 
-    const result = await model.generateContent(systemPrompt)
-    const responseText = result.response.text()
-    // ✅ snake_case/camelCase 어느 컨벤션이든 DB 컬럼 형태로 정규화(BUG-4)
-    const generatedQuestions = normalizeList(parseJsonLoose(responseText))
+    // ✅ 생성 → 파싱 정규화. 모델이 가끔 깨진 JSON을 내므로 최대 3회 재시도.
+    let generatedQuestions: ReturnType<typeof normalizeList> = []
+    let parseErr: unknown = null
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const result = await model.generateContent(systemPrompt)
+        const list = normalizeList(parseJsonLoose(result.response.text()))
+        if (list.length > 0) { generatedQuestions = list; parseErr = null; break }
+        parseErr = new Error('생성된 문제가 없습니다.')
+      } catch (e) {
+        parseErr = e
+        console.error(`generateQuizDraft attempt ${attempt + 1} failed:`, e)
+      }
+    }
+    if (parseErr) throw parseErr
 
     // 선택한 분야를 함께 반환해 저장 시 일괄 적용
     return { success: true, data: generatedQuestions, category: categoryId }

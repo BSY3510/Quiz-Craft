@@ -3,6 +3,50 @@
 // 한 곳에서 흡수한다: snake_case(question_text/answer_id/code_snippet)와
 // camelCase(question/answerId/codeSnippet)를 모두 수용해 DB 컬럼 형태로 정규화.
 
+import { SchemaType, type ResponseSchema } from '@google/generative-ai'
+
+// Gemini 구조 강제 출력 스키마. responseSchema 로 넘기면 모델이 따옴표 누락·
+// 이스케이프 깨짐 같은 무효 JSON을 만들지 못하도록 생성 자체를 제약한다(오류 #2/#3 예방).
+export const QUESTION_RESPONSE_SCHEMA: ResponseSchema = {
+  type: SchemaType.ARRAY,
+  items: {
+    type: SchemaType.OBJECT,
+    properties: {
+      type: { type: SchemaType.STRING },
+      question_text: { type: SchemaType.STRING },
+      code_snippet: { type: SchemaType.STRING, nullable: true },
+      options: {
+        type: SchemaType.ARRAY,
+        items: {
+          type: SchemaType.OBJECT,
+          properties: {
+            id: { type: SchemaType.STRING },
+            text: { type: SchemaType.STRING },
+          },
+          required: ['id', 'text'],
+        },
+      },
+      answer_id: { type: SchemaType.STRING },
+      explanation: { type: SchemaType.STRING },
+    },
+    required: ['question_text', 'options', 'answer_id', 'explanation'],
+  },
+}
+
+// AI 2차 검증 응답용 스키마. [{ index, valid, reason }]
+export const VALIDATION_RESPONSE_SCHEMA: ResponseSchema = {
+  type: SchemaType.ARRAY,
+  items: {
+    type: SchemaType.OBJECT,
+    properties: {
+      index: { type: SchemaType.INTEGER },
+      valid: { type: SchemaType.BOOLEAN },
+      reason: { type: SchemaType.STRING, nullable: true },
+    },
+    required: ['index', 'valid'],
+  },
+}
+
 // 마스터 프롬프트에 변수 치환 (분야별 가이드 포함). 반자동·자동 출제 공용.
 export function buildPrompt(
   master: string,
@@ -60,21 +104,43 @@ export function normalizeList(raw: unknown): NormalizedQuestion[] {
 }
 
 // LLM 응답에서 JSON 본문만 추출해 파싱(코드펜스·앞뒤 잡텍스트·설명 덧붙임 대비).
+// 첫 '[' 또는 '{' 에서 시작해 문자열·이스케이프를 고려한 "균형 잡힌 닫힘"까지만
+// 잘라낸다. 뒤따르는 설명 문장이나 그 안의 ']' 같은 잡브래킷에 휘둘리지 않는다.
 // "Unexpected non-whitespace character after JSON" 류 오류를 방지한다.
 export function parseJsonLoose(text: string): unknown {
   let t = (text ?? '').trim()
   if (t.startsWith('```')) {
     t = t.replace(/^```(?:json)?/i, '').replace(/```\s*$/i, '').trim()
   }
-  const a1 = t.indexOf('[')
-  if (a1 !== -1) {
-    const a2 = t.lastIndexOf(']')
-    if (a2 > a1) return JSON.parse(t.slice(a1, a2 + 1))
-  }
-  const o1 = t.indexOf('{')
-  if (o1 !== -1) {
-    const o2 = t.lastIndexOf('}')
-    if (o2 > o1) return JSON.parse(t.slice(o1, o2 + 1))
+
+  const aIdx = t.indexOf('[')
+  const oIdx = t.indexOf('{')
+  let start = -1
+  if (aIdx === -1) start = oIdx
+  else if (oIdx === -1) start = aIdx
+  else start = Math.min(aIdx, oIdx)
+
+  if (start !== -1) {
+    const open = t[start]
+    const close = open === '[' ? ']' : '}'
+    let depth = 0
+    let inStr = false
+    let esc = false
+    for (let i = start; i < t.length; i++) {
+      const ch = t[i]
+      if (inStr) {
+        if (esc) esc = false
+        else if (ch === '\\') esc = true
+        else if (ch === '"') inStr = false
+        continue
+      }
+      if (ch === '"') { inStr = true; continue }
+      if (ch === open) depth++
+      else if (ch === close) {
+        depth--
+        if (depth === 0) return JSON.parse(t.slice(start, i + 1))
+      }
+    }
   }
   return JSON.parse(t)
 }

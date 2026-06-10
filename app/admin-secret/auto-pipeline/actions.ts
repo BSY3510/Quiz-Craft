@@ -2,7 +2,16 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { checkAdmin } from '@/utils/auth'
-import { buildPrompt, normalizeAndValidate, buildValidationPrompt, parseValidation, parseJsonLoose } from '../questionSchema'
+import {
+  buildPrompt,
+  normalizeAndValidate,
+  buildValidationPrompt,
+  parseValidation,
+  parseJsonLoose,
+  QUESTION_RESPONSE_SCHEMA,
+  VALIDATION_RESPONSE_SCHEMA,
+  type NormalizedQuestion,
+} from '../questionSchema'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { revalidatePath } from 'next/cache'
 
@@ -36,26 +45,44 @@ export async function runAutoPipeline(categoryId: string, count: number) {
   })
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+  const modelName = settings.gemini_model || process.env.GEMINI_MODEL_VERSION || 'gemini-3.1-flash-lite'
+
+  // 출제 모델: 구조 강제 스키마로 무효 JSON 생성 자체를 차단
   const model = genAI.getGenerativeModel({
-    model: settings.gemini_model || process.env.GEMINI_MODEL_VERSION || 'gemini-3.1-flash-lite',
-    generationConfig: { responseMimeType: 'application/json' }
+    model: modelName,
+    generationConfig: { responseMimeType: 'application/json', responseSchema: QUESTION_RESPONSE_SCHEMA },
+  })
+  // 검증 모델: 출력 형태가 다르므로 별도 스키마([{index,valid,reason}])를 적용
+  const valModel = genAI.getGenerativeModel({
+    model: modelName,
+    generationConfig: { responseMimeType: 'application/json', responseSchema: VALIDATION_RESPONSE_SCHEMA },
   })
 
   try {
-    const result = await model.generateContent(systemPrompt)
-    const responseText = result.response.text()
-
-    // ✅ 1차: 구조 정규화·검증(BUG-4) — 무효 형식은 DB 오염 없이 거부
-    const checked = normalizeAndValidate(parseJsonLoose(responseText))
-    if (!checked.ok) {
-      return { error: `생성 결과 검증 실패: ${checked.error}` }
+    // ✅ 1차: 생성 → 파싱 → 구조 검증. 모델이 가끔 깨진 JSON을 내므로 최대 3회 재시도.
+    let questions: NormalizedQuestion[] | null = null
+    let lastErr = '알 수 없는 오류'
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const result = await model.generateContent(systemPrompt)
+        const c = normalizeAndValidate(parseJsonLoose(result.response.text()))
+        if (c.ok) { questions = c.questions; break }
+        lastErr = c.error
+      } catch (e) {
+        lastErr = e instanceof Error ? e.message : String(e)
+        console.error(`Auto Pipeline generate attempt ${attempt + 1} failed:`, e)
+      }
     }
+    if (!questions) {
+      return { error: `생성 결과 검증 실패(재시도 초과): ${lastErr}` }
+    }
+    const checked = { questions }
 
     // ✅ 2차: 독립 AI 호출로 내용 검수(정답 정확성·복수정답·명확성).
     //    실패 시 안전하게 전부 검증 큐(pending_review)로 보낸다.
     let validFlags: boolean[]
     try {
-      const valResult = await model.generateContent(buildValidationPrompt(checked.questions))
+      const valResult = await valModel.generateContent(buildValidationPrompt(checked.questions))
       validFlags = parseValidation(parseJsonLoose(valResult.response.text()), checked.questions.length)
     } catch (e) {
       console.error('AI validation failed:', e)
