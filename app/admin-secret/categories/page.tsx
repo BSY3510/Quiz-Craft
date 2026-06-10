@@ -18,6 +18,14 @@ export default function AdminCategoriesPage() {
   const [newId, setNewId] = useState('')
   const [newName, setNewName] = useState('')
   const [editingCategory, setEditingCategory] = useState<any>(null)
+  const [search, setSearch] = useState('')
+
+  // 검색 필터 (식별 ID 또는 분야명)
+  const keyword = search.trim().toLowerCase()
+  const filteredCategories = keyword
+    ? categories.filter(c =>
+        c.id.toLowerCase().includes(keyword) || (c.name || '').toLowerCase().includes(keyword))
+    : categories
 
   // 분야 목록 불러오기
   const fetchCategories = async () => {
@@ -126,12 +134,28 @@ export default function AdminCategoriesPage() {
           </form>
         </section>
 
+        {/* 분야 검색 */}
+        <div className="relative">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔍 분야 검색 (ID 또는 이름)"
+            className="w-full p-3 pl-4 border border-slate-200 rounded-xl text-sm text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+          />
+          {keyword && (
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400">{filteredCategories.length}개</span>
+          )}
+        </div>
+
         {/* 분야 리스트 테이블 */}
         <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           {isLoading ? (
             <div className="p-8 text-center text-slate-500 font-bold">분야 목록을 불러오는 중...</div>
           ) : categories.length === 0 ? (
             <div className="p-8 text-center text-slate-500">등록된 분야가 없습니다.</div>
+          ) : filteredCategories.length === 0 ? (
+            <div className="p-8 text-center text-slate-500">&apos;{search}&apos; 검색 결과가 없습니다.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
@@ -144,7 +168,7 @@ export default function AdminCategoriesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-800">
-                  {categories.map(category => (
+                  {filteredCategories.map(category => (
                     <tr key={category.id} className="hover:bg-slate-50">
                       <td className="p-4 font-mono text-xs font-bold text-slate-500 uppercase">{category.id}</td>
                       <td className="p-4 font-bold">{category.name}</td>
@@ -161,7 +185,7 @@ export default function AdminCategoriesPage() {
                           onClick={() => setEditingCategory({ ...category })}
                           className="px-2.5 py-1.5 bg-slate-100 text-slate-600 text-xs font-bold rounded hover:bg-slate-200 border border-slate-200"
                         >
-                          ✏️ 이름 수정
+                          ✏️ 수정
                         </button>
                         <button 
                           onClick={() => handleDeleteCategory(category.id)}
