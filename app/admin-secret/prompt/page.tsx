@@ -62,7 +62,8 @@ export default function AdminPromptPage() {
               {/* ✅ 중괄호 렌더링 에러를 피하기 위해 템플릿 리터럴 형태로 텍스트 바인딩 안전 처리 */}
               <li><code className="bg-blue-100 px-1 py-0.5 rounded font-mono font-bold">{"{{category}}"}</code> : 치환자 문구를 넣으면, 문제 생성 시 선택한 분야명으로 자동 변경됩니다.</li>
               <li><code className="bg-blue-100 px-1 py-0.5 rounded font-mono font-bold">{"{{count}}"}</code> : 치환자 문구를 넣으면, 생성할 문제 개수로 자동 치환됩니다.</li>
-              <li>AI가 결과를 완벽하게 파싱할 수 있도록 <strong>JSON 응답 가이드 구조</strong>는 에디터 하단 형태를 최대한 유지해 주세요.</li>
+              <li><code className="bg-blue-100 px-1 py-0.5 rounded font-mono font-bold">{"{{category_guide}}"}</code> : <strong>분야별 출제 가이드</strong>가 삽입됩니다(분야 관리에서 분야마다 입력). 마스터는 공통 규칙·포맷을 담고, 분야 특화 지시는 가이드로 분리하세요.</li>
+              <li>AI가 결과를 완벽하게 파싱할 수 있도록 <strong>JSON 응답 가이드 구조</strong>는 에디터 하단 형태를 최대한 유지해 주세요. (snake_case/camelCase 모두 자동 정규화됩니다)</li>
               <li>프로그래밍 이외의 다방면 퀴즈 앱으로 확장하려면 프롬프트 내의 &apos;프로그래밍&apos; 단어들을 제거하고 일반 지식 가이드로 수정하세요.</li>
             </ul>
           </div>

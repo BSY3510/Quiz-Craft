@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { checkAdmin } from '@/utils/auth'
-import { normalizeList, normalizeAndValidate } from './questionSchema'
+import { buildPrompt, normalizeList, normalizeAndValidate } from './questionSchema'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { revalidatePath } from 'next/cache'
 
@@ -38,10 +38,18 @@ export async function generateQuizDraft(formData: FormData) {
       return { success: false, error: '시스템 프롬프트가 설정되지 않았습니다. 관리자 페이지에서 프롬프트를 설정해주세요.' }
     }
 
-    // ✅ 사용자가 정의한 {{category}}와 {{count}} 변수 치환
-    const systemPrompt = settings.system_prompt
-      .replace(/{{category}}/g, categoryId)
-      .replace(/{{count}}/g, count.toString())
+    // ✅ 분야 이름·가이드 조회 후 마스터 프롬프트에 치환({{category}}/{{count}}/{{category_guide}})
+    const { data: cat } = await supabase
+      .from('categories')
+      .select('name, prompt')
+      .eq('id', categoryId)
+      .single()
+
+    const systemPrompt = buildPrompt(settings.system_prompt, {
+      categoryName: cat?.name || categoryId,
+      count,
+      guide: cat?.prompt || '',
+    })
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
     const modelName = process.env.GEMINI_MODEL_VERSION || 'gemini-2.5-flash'

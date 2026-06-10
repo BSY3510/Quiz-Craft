@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { createCategory, toggleCategoryActive, updateCategoryName, deleteCategory } from './actions'
+import { createCategory, toggleCategoryActive, updateCategory, deleteCategory } from './actions'
 
 export default function AdminCategoriesPage() {
   const supabase = createClient()
@@ -64,9 +64,9 @@ export default function AdminCategoriesPage() {
   const handleSaveEdit = async () => {
     if (!editingCategory || !editingCategory.name.trim()) return
 
-    const res = await updateCategoryName(editingCategory.id, editingCategory.name)
+    const res = await updateCategory(editingCategory.id, editingCategory.name, editingCategory.prompt || '')
     if (!res.error) {
-      alert('분야명이 수정되었습니다.')
+      alert('분야 정보가 수정되었습니다.')
       setEditingCategory(null)
       fetchCategories()
     } else {
@@ -190,12 +190,23 @@ export default function AdminCategoriesPage() {
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-600 mb-1">새 분야 이름</label>
-              <input 
-                type="text" 
-                value={editingCategory.name} 
+              <input
+                type="text"
+                value={editingCategory.name}
                 onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
                 className="w-full p-3 border border-slate-300 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-600 mb-1">분야별 출제 가이드 <span className="font-normal text-slate-400">(선택)</span></label>
+              <textarea
+                value={editingCategory.prompt || ''}
+                onChange={(e) => setEditingCategory({ ...editingCategory, prompt: e.target.value })}
+                rows={4}
+                placeholder={'이 분야에 특화된 출제 지시를 적어주세요.\n예: 최신 LTS 기준, 컬렉션·제네릭·스트림 위주. 너무 지엽적인 문법은 제외.'}
+                className="w-full p-3 border border-slate-300 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-slate-400 mt-1">마스터 프롬프트의 <code className="bg-slate-100 px-1 rounded font-mono">{'{{category_guide}}'}</code> 자리에 삽입됩니다. 비워두면 마스터만 사용.</p>
             </div>
             <div className="flex gap-2 pt-2">
               <button onClick={handleSaveEdit} className="flex-1 p-3 bg-blue-600 text-white font-bold rounded-xl text-sm hover:bg-blue-700">변경 저장</button>

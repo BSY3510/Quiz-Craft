@@ -3,6 +3,17 @@
 // 한 곳에서 흡수한다: snake_case(question_text/answer_id/code_snippet)와
 // camelCase(question/answerId/codeSnippet)를 모두 수용해 DB 컬럼 형태로 정규화.
 
+// 마스터 프롬프트에 변수 치환 (분야별 가이드 포함). 반자동·자동 출제 공용.
+export function buildPrompt(
+  master: string,
+  opts: { categoryName: string; count: number; guide: string }
+): string {
+  return master
+    .replace(/\{\{category\}\}/g, opts.categoryName)
+    .replace(/\{\{count\}\}/g, String(opts.count))
+    .replace(/\{\{category_guide\}\}/g, opts.guide || '')
+}
+
 export interface NormalizedQuestion {
   type: string
   question_text: string

@@ -39,8 +39,8 @@ export async function toggleCategoryActive(id: string, currentActive: boolean) {
   return { success: true }
 }
 
-// 분야명 수정
-export async function updateCategoryName(id: string, name: string) {
+// 분야 정보 수정 (분야명 + 분야별 출제 가이드 프롬프트)
+export async function updateCategory(id: string, name: string, prompt: string) {
   const c = await checkAdmin()
   if (!c.ok) return { error: c.error }
 
@@ -50,7 +50,7 @@ export async function updateCategoryName(id: string, name: string) {
   const supabase = await createClient()
   const { error } = await supabase
     .from('categories')
-    .update({ name: cleanName })
+    .update({ name: cleanName, prompt: prompt?.trim() || null })
     .eq('id', id)
 
   if (error) return { error: '수정 중 오류가 발생했습니다.' }

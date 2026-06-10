@@ -115,11 +115,20 @@ export default function AdminQuizGenerator() {
                   rows={2}
                 />
                 
+                <p className="text-xs text-slate-400">보기 앞 동그라미를 클릭해 <span className="font-bold text-green-600">정답</span>을 지정하세요.</p>
                 <div className="grid grid-cols-2 gap-2">
                   {draft.options.map((opt: any, optIdx: number) => (
-                    <div key={opt.id} className={`flex items-center p-2 border rounded-lg ${draft.answer_id === opt.id ? 'border-green-500 bg-green-50' : 'border-slate-300 bg-white'}`}>
-                      <span className="w-6 font-bold text-slate-400">{opt.id}.</span>
-                      <input 
+                    <div key={opt.id} className={`flex items-center gap-2 p-2 border rounded-lg ${draft.answer_id === opt.id ? 'border-green-500 bg-green-50' : 'border-slate-300 bg-white'}`}>
+                      {/* ✅ 정답 지정 버튼 (클릭 시 answer_id 변경) */}
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateDraft(idx, 'answer_id', opt.id)}
+                        title="정답으로 지정"
+                        className={`flex-shrink-0 w-6 h-6 rounded-full border-2 text-xs font-bold flex items-center justify-center transition-colors ${draft.answer_id === opt.id ? 'border-green-500 bg-green-500 text-white' : 'border-slate-300 text-slate-400 hover:border-green-400'}`}
+                      >
+                        {draft.answer_id === opt.id ? '✓' : opt.id}
+                      </button>
+                      <input
                         value={opt.text}
                         onChange={(e) => {
                           const newOptions = [...draft.options];
