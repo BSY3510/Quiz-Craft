@@ -76,7 +76,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // 4. 보호된 라우트(승인 게이트) 검증 (SEC-05, SEC-06)
-  const protectedRoutes = ['/quiz', '/stats', '/me']
+  const protectedRoutes = ['/quiz', '/stats', '/me', '/badges']
   if (protectedRoutes.some(route => pathname.startsWith(route))) {
     if (!user) {
       return NextResponse.redirect(new URL('/login', request.url))
