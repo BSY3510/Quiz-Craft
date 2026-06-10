@@ -10,6 +10,9 @@ import { useConfirm } from '@/app/components/Confirm'
 import { Modal } from '@/app/components/Modal'
 import type { Category } from '@/types/db'
 
+// 분야 아이콘 빠른 선택용 프리셋(프로그래밍/학습 분야 위주). 직접 입력도 가능.
+const PRESET_ICONS = ['💡', '🟦', '🟨', '🐍', '☕', '🗄️', '🌐', '⚛️', '📱', '🔧', '🧮', '📊', '🔐', '🐳', '🦀', '🐘', '📦', '🧪', '🖥️', '⚙️', '📚', '🧩', '🚀', '🔥']
+
 export default function AdminCategoriesPage() {
   const supabase = createClient()
   const adminPath = useAdminPath()
@@ -77,7 +80,7 @@ export default function AdminCategoriesPage() {
   const handleSaveEdit = async () => {
     if (!editingCategory || !editingCategory.name.trim()) return
 
-    const res = await updateCategory(editingCategory.id, editingCategory.name, editingCategory.prompt || '')
+    const res = await updateCategory(editingCategory.id, editingCategory.name, editingCategory.prompt || '', editingCategory.icon || '')
     if (!res.error) {
       toast.success('분야 정보가 수정되었습니다.')
       setEditingCategory(null)
@@ -182,7 +185,10 @@ export default function AdminCategoriesPage() {
                   {filteredCategories.map(category => (
                     <tr key={category.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                       <td className="p-4 font-mono text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">{category.id}</td>
-                      <td className="p-4 font-bold">{category.name}</td>
+                      <td className="p-4 font-bold">
+                        <span className="mr-2">{category.icon || '💡'}</span>
+                        {category.name}
+                      </td>
                       <td className="p-4">
                         <button 
                           onClick={() => handleToggleActive(category.id, category.active)}
@@ -231,6 +237,44 @@ export default function AdminCategoriesPage() {
                 onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
                 className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">분야 아이콘 <span className="font-normal text-slate-400 dark:text-slate-500">(선택 · 비우면 기본 💡)</span></label>
+              <div className="flex items-center gap-2">
+                <div className="w-12 h-12 shrink-0 flex items-center justify-center text-2xl bg-slate-50 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600">
+                  {editingCategory.icon || '💡'}
+                </div>
+                <input
+                  type="text"
+                  value={editingCategory.icon || ''}
+                  onChange={(e) => setEditingCategory({ ...editingCategory, icon: e.target.value })}
+                  placeholder="이모지 직접 입력"
+                  className="flex-1 p-2.5 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setEditingCategory({ ...editingCategory, icon: '' })}
+                  className="shrink-0 px-3 py-2.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
+                >
+                  기본값
+                </button>
+              </div>
+              <div className="grid grid-cols-8 gap-1.5 mt-2">
+                {PRESET_ICONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => setEditingCategory({ ...editingCategory, icon: emoji })}
+                    className={`aspect-square flex items-center justify-center text-lg rounded-lg border transition-colors ${
+                      editingCategory.icon === emoji
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                        : 'border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">분야별 출제 가이드 <span className="font-normal text-slate-400 dark:text-slate-500">(선택)</span></label>

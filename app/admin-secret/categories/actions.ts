@@ -39,18 +39,21 @@ export async function toggleCategoryActive(id: string, currentActive: boolean) {
   return { success: true }
 }
 
-// 분야 정보 수정 (분야명 + 분야별 출제 가이드 프롬프트)
-export async function updateCategory(id: string, name: string, prompt: string) {
+// 분야 정보 수정 (분야명 + 분야별 출제 가이드 프롬프트 + 아이콘)
+export async function updateCategory(id: string, name: string, prompt: string, icon?: string | null) {
   const c = await checkAdmin()
   if (!c.ok) return { error: c.error }
 
   const cleanName = name.trim()
   if (!cleanName) return { error: '분야명을 입력해 주세요.' }
 
+  // 아이콘은 이모지 1~2자 정도만 의도 — 과도한 입력은 잘라낸다(빈 값이면 null=폴백)
+  const cleanIcon = (icon ?? '').trim().slice(0, 8) || null
+
   const supabase = await createClient()
   const { error } = await supabase
     .from('categories')
-    .update({ name: cleanName, prompt: prompt?.trim() || null })
+    .update({ name: cleanName, prompt: prompt?.trim() || null, icon: cleanIcon })
     .eq('id', id)
 
   if (error) return { error: '수정 중 오류가 발생했습니다.' }
