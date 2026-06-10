@@ -69,10 +69,10 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
     fetchQuestions()
   }, [categoryId, supabase])
 
-  if (isLoading) return <div className="flex min-h-screen items-center justify-center bg-slate-50"><p className="text-slate-500 font-bold animate-pulse">문제를 준비 중입니다...</p></div>
+  if (isLoading) return <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-900"><p className="text-slate-500 dark:text-slate-400 font-bold animate-pulse">문제를 준비 중입니다...</p></div>
   if (questions.length === 0) return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4">
-      <p className="text-slate-600 mb-4 font-bold">이 분야에는 아직 등록된 문제가 없습니다.</p>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
+      <p className="text-slate-600 dark:text-slate-300 mb-4 font-bold">이 분야에는 아직 등록된 문제가 없습니다.</p>
       <button onClick={() => router.push('/quiz')} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold">대시보드로 돌아가기</button>
     </div>
   )
@@ -81,11 +81,11 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
   const isExhausted = currentIndex >= questions.length
 
   if (isExhausted) return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4">
-      <h2 className="text-2xl font-black text-slate-800 mb-2">모든 문제를 다 풀었습니다! 🎉</h2>
-      <p className="text-slate-600 mb-8">오답 노트를 확인하거나 다른 분야에 도전해 보세요.</p>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
+      <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-2">모든 문제를 다 풀었습니다! 🎉</h2>
+      <p className="text-slate-600 dark:text-slate-300 mb-8">오답 노트를 확인하거나 다른 분야에 도전해 보세요.</p>
       <div className="flex gap-4">
-        <button onClick={() => router.push(`/review/${categoryId}`)} className="px-6 py-3 bg-slate-800 text-white rounded-xl font-bold">오답 노트 가기</button>
+        <button onClick={() => router.push(`/review/${categoryId}`)} className="px-6 py-3 bg-slate-800 text-white rounded-xl font-bold dark:bg-slate-700 dark:hover:bg-slate-600">오답 노트 가기</button>
         <button onClick={() => router.push('/quiz')} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold">대시보드로 가기</button>
       </div>
     </div>
@@ -153,26 +153,26 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
   const isCorrect = isSubmitted && result?.isCorrect === true
 
   return (
-    <main className="flex min-h-screen flex-col items-center bg-slate-50 p-4 pt-8 relative">
+    <main className="flex min-h-screen flex-col items-center bg-slate-50 dark:bg-slate-900 p-4 pt-8 relative">
       <div className="w-full max-w-md">
 
         <div className="flex justify-between items-center mb-6">
-          <button onClick={() => router.push('/quiz')} className="text-sm font-bold text-slate-400 hover:text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+          <button onClick={() => router.push('/quiz')} className="text-sm font-bold text-slate-400 hover:text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:text-slate-100">
             ← 그만 풀고 나가기
           </button>
-          <div className="text-sm font-bold text-slate-500">
-            <span className="uppercase text-blue-600 mr-2">{categoryId}</span>
+          <div className="text-sm font-bold text-slate-500 dark:text-slate-400">
+            <span className="uppercase text-blue-600 dark:text-blue-400 mr-2">{categoryId}</span>
             <span>현재 {currentIndex + 1}문제째 도전 중</span>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6 relative overflow-hidden">
-          <h2 className="text-lg font-bold text-slate-800 leading-relaxed mb-4">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6 relative overflow-hidden">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 leading-relaxed mb-4">
             {currentQuestion.question_text}
           </h2>
 
           {currentQuestion.code_snippet && (
-            <pre className="bg-slate-800 text-slate-50 p-4 rounded-lg overflow-x-auto text-sm font-mono mb-6">
+            <pre className="bg-slate-800 dark:bg-slate-950 text-slate-50 p-4 rounded-lg overflow-x-auto text-sm font-mono mb-6">
               <code>{currentQuestion.code_snippet}</code>
             </pre>
           )}
@@ -183,13 +183,13 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
               // ✅ 정답 여부는 제출 후 서버 결과로만 판단
               const isAnswer = result?.answerId === option.id
 
-              let optionClass = "border-slate-200 hover:border-blue-400 text-slate-700 bg-white"
+              let optionClass = "border-slate-200 hover:border-blue-400 text-slate-700 bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-500"
               if (isSubmitted) {
-                if (isAnswer) optionClass = "border-green-500 bg-green-50 text-green-800 font-bold"
-                else if (isSelected && !isAnswer) optionClass = "border-red-500 bg-red-50 text-red-800"
-                else optionClass = "border-slate-100 bg-slate-50 text-slate-400 opacity-50"
+                if (isAnswer) optionClass = "border-green-500 bg-green-50 text-green-800 font-bold dark:bg-green-900/30 dark:text-green-300"
+                else if (isSelected && !isAnswer) optionClass = "border-red-500 bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                else optionClass = "border-slate-100 bg-slate-50 text-slate-400 opacity-50 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-500"
               } else if (isSelected) {
-                optionClass = "border-blue-500 bg-blue-50 text-blue-800 font-bold ring-1 ring-blue-500"
+                optionClass = "border-blue-500 bg-blue-50 text-blue-800 font-bold ring-1 ring-blue-500 dark:bg-blue-900/30 dark:text-blue-300"
               }
 
               return (
@@ -203,17 +203,17 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
 
         <div className="flex flex-col gap-4 mb-8">
           {isSubmitted && result ? (
-            <div className={`p-4 rounded-xl border ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+            <div className={`p-4 rounded-xl border ${isCorrect ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-900/50' : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-900/50'}`}>
               <div className="flex items-center justify-between mb-2">
-                <span className={`font-bold text-lg ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
+                <span className={`font-bold text-lg ${isCorrect ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                   {isCorrect ? '정답입니다! 🎉' : '오답입니다.'}
                 </span>
                 {/* ✅ 실제 획득 XP를 표시(BUG-3) */}
                 {result.xpAwarded > 0 && (
-                  <span className="px-2 py-1 bg-green-200 text-green-800 text-xs font-black rounded-lg animate-bounce">+{result.xpAwarded} XP 획득!</span>
+                  <span className="px-2 py-1 bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-100 text-xs font-black rounded-lg animate-bounce">+{result.xpAwarded} XP 획득!</span>
                 )}
               </div>
-              <p className="text-slate-700 text-sm leading-relaxed mb-4">
+              <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed mb-4">
                 <strong className="block mb-1">해설:</strong>
                 {result.explanation}
               </p>
@@ -225,7 +225,7 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
                 {/* ✅ 문제 신고/정정 요청 버튼 추가 */}
                 <button
                   onClick={() => setIsReportModalOpen(true)}
-                  className="px-4 font-bold text-slate-500 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
+                  className="px-4 font-bold text-slate-500 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700"
                   title="오류 신고"
                 >
                   🚨 신고
@@ -233,7 +233,7 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
               </div>
             </div>
           ) : (
-            <button onClick={handleSubmit} disabled={!selectedOption || isGrading} className="w-full p-4 font-bold text-white bg-slate-800 rounded-xl hover:bg-slate-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+            <button onClick={handleSubmit} disabled={!selectedOption || isGrading} className="w-full p-4 font-bold text-white bg-slate-800 rounded-xl hover:bg-slate-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm dark:bg-slate-700 dark:hover:bg-slate-600">
               {isGrading ? '채점 중...' : '제출하기'}
             </button>
           )}
@@ -247,14 +247,14 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
         className="max-w-md"
         labelledBy="report-title"
       >
-        <h3 id="report-title" className="text-lg font-bold text-slate-800 mb-2">🚨 문제 오류 신고</h3>
-        <p className="text-sm text-slate-500 mb-4">문제의 오타나 잘못된 해설 등 오류를 알려주시면 검토 후 반영하겠습니다.</p>
+        <h3 id="report-title" className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">🚨 문제 오류 신고</h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">문제의 오타나 잘못된 해설 등 오류를 알려주시면 검토 후 반영하겠습니다.</p>
 
         <textarea
           value={reportReason}
           onChange={(e) => setReportReason(e.target.value)}
           placeholder="예: 해설에 설명된 개념이 최신 버전과 다릅니다."
-          className="w-full p-3 border border-slate-300 rounded-lg text-sm text-slate-800 mb-4"
+          className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 mb-4"
           rows={4}
         />
 
@@ -268,7 +268,7 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
           </button>
           <button
             onClick={() => { setIsReportModalOpen(false); setReportReason('') }}
-            className="flex-1 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
+            className="flex-1 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
           >
             취소
           </button>

@@ -20,12 +20,12 @@ export default async function LeaderboardPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center bg-slate-50 p-4 pt-8">
+    <main className="flex min-h-screen flex-col items-center bg-slate-50 dark:bg-slate-900 p-4 pt-8">
       <div className="w-full max-w-md space-y-6">
-        
+
         <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-800">명예의 전당</h1>
-          <Link href="/quiz" className="text-sm text-blue-600 font-medium hover:underline">
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">명예의 전당</h1>
+          <Link href="/quiz" className="text-sm text-blue-600 dark:text-blue-400 font-medium hover:underline">
             퀴즈로 돌아가기
           </Link>
         </header>
@@ -37,30 +37,30 @@ export default async function LeaderboardPage() {
           </p>
         </div>
 
-        <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="divide-y divide-slate-100">
+        <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="divide-y divide-slate-100 dark:divide-slate-700">
             {leaderboard?.map((entry: { rank: number; masked_name: string; xp: number; current_streak: number }) => (
               <div
                 key={entry.rank}
-                className={`flex items-center p-4 transition-colors hover:bg-slate-50 ${entry.rank <= 3 ? 'bg-amber-50/30' : ''}`}
+                className={`flex items-center p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50 ${entry.rank <= 3 ? 'bg-amber-50/30 dark:bg-amber-900/10' : ''}`}
               >
                 <div className="w-10 text-center text-xl flex-shrink-0">
                   {getRankIcon(entry.rank)}
                 </div>
 
                 <div className="flex-1 ml-4">
-                  <p className={`font-bold ${entry.rank <= 3 ? 'text-slate-800' : 'text-slate-700'}`}>
+                  <p className={`font-bold ${entry.rank <= 3 ? 'text-slate-800 dark:text-slate-100' : 'text-slate-700 dark:text-slate-200'}`}>
                     {entry.masked_name}
                   </p>
                   {entry.current_streak > 0 && (
-                    <p className="text-xs font-medium text-orange-500 mt-0.5 flex items-center gap-1">
+                    <p className="text-xs font-medium text-orange-500 dark:text-orange-400 mt-0.5 flex items-center gap-1">
                       🔥 {entry.current_streak}일 연속 학습 중
                     </p>
                   )}
                 </div>
 
                 <div className="text-right">
-                  <p className="text-lg font-black text-blue-600">
+                  <p className="text-lg font-black text-blue-600 dark:text-blue-400">
                     {entry.xp.toLocaleString()}<span className="text-sm font-medium text-blue-400 ml-1">XP</span>
                   </p>
                 </div>
@@ -68,7 +68,7 @@ export default async function LeaderboardPage() {
             ))}
 
             {leaderboard?.length === 0 && (
-              <div className="p-8 text-center text-slate-500 text-sm">
+              <div className="p-8 text-center text-slate-500 dark:text-slate-400 text-sm">
                 아직 랭킹 데이터가 없습니다.<br/>첫 번째 랭커가 되어보세요!
               </div>
             )}

@@ -21,7 +21,7 @@ export default function DeactivateButton() {
   return (
     <button
       onClick={handleDeactivate}
-      className="w-full p-3 bg-red-50 text-red-600 font-bold rounded-lg hover:bg-red-100 transition-colors"
+      className="w-full p-3 bg-red-50 text-red-600 font-bold rounded-lg hover:bg-red-100 transition-colors dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
     >
       계정 비활성화 (회원 탈퇴)
     </button>
