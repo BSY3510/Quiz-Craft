@@ -71,15 +71,19 @@ export default async function QuizDashboardPage() {
           </div>
         </div>
 
-        {/* 리더보드·배지 진입 버튼 */}
-        <div className="grid grid-cols-2 gap-3">
-          <Link href="/leaderboard" className="flex items-center justify-center gap-2 w-full p-4 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors shadow-sm group dark:bg-amber-900/20 dark:border-amber-900 dark:hover:bg-amber-900/30">
+        {/* 리더보드·배지·북마크 진입 버튼 */}
+        <div className="grid grid-cols-3 gap-3">
+          <Link href="/leaderboard" className="flex flex-col items-center justify-center gap-1 w-full p-4 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors shadow-sm group dark:bg-amber-900/20 dark:border-amber-900 dark:hover:bg-amber-900/30">
             <span className="text-2xl group-hover:scale-110 transition-transform">🏆</span>
-            <span className="font-bold text-amber-800 dark:text-amber-300">리더보드</span>
+            <span className="text-xs font-bold text-amber-800 dark:text-amber-300">리더보드</span>
           </Link>
-          <Link href="/badges" className="flex items-center justify-center gap-2 w-full p-4 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors shadow-sm group dark:bg-indigo-900/20 dark:border-indigo-900 dark:hover:bg-indigo-900/30">
+          <Link href="/badges" className="flex flex-col items-center justify-center gap-1 w-full p-4 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors shadow-sm group dark:bg-indigo-900/20 dark:border-indigo-900 dark:hover:bg-indigo-900/30">
             <span className="text-2xl group-hover:scale-110 transition-transform">🎖️</span>
-            <span className="font-bold text-indigo-800 dark:text-indigo-300">나의 배지</span>
+            <span className="text-xs font-bold text-indigo-800 dark:text-indigo-300">나의 배지</span>
+          </Link>
+          <Link href="/bookmarks" className="flex flex-col items-center justify-center gap-1 w-full p-4 bg-rose-50 border border-rose-200 rounded-xl hover:bg-rose-100 transition-colors shadow-sm group dark:bg-rose-900/20 dark:border-rose-900 dark:hover:bg-rose-900/30">
+            <span className="text-2xl group-hover:scale-110 transition-transform">🔖</span>
+            <span className="text-xs font-bold text-rose-800 dark:text-rose-300">북마크</span>
           </Link>
         </div>
 

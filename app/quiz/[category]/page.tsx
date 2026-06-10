@@ -8,6 +8,7 @@ import { useToast } from '@/app/components/Toast'
 import { Modal } from '@/app/components/Modal'
 import { Skeleton } from '@/app/components/Skeleton'
 import { DifficultyBadge } from '@/app/components/ui'
+import QuestionReactions from '@/app/components/QuestionReactions'
 
 // ✅ 정답(answer_id)과 해설(explanation)은 클라이언트로 받지 않는다(SEC-A).
 //    제출 후 서버 채점 결과(GradeResult)로만 노출된다.
@@ -313,6 +314,10 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
                 <strong className="block mb-1">해설:</strong>
                 {result.explanation}
               </p>
+
+              <div className="mb-3">
+                <QuestionReactions questionId={currentQuestion.id} />
+              </div>
 
               <div className="flex gap-2">
                 <button onClick={handleNext} className="flex-1 p-4 font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors shadow-sm">

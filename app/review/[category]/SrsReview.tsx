@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/app/components/Toast'
 import { DifficultyBadge } from '@/app/components/ui'
+import QuestionReactions from '@/app/components/QuestionReactions'
 
 interface QContent {
   id: string
@@ -209,6 +210,9 @@ export default function SrsReview({ categoryId, cards }: { categoryId: string; c
             )}
           </div>
           <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed mb-4"><strong className="block mb-1">해설:</strong>{result.explanation}</p>
+          <div className="mb-3">
+            <QuestionReactions questionId={q.id} />
+          </div>
           <button onClick={next} className="w-full p-4 font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors">
             {index + 1 < queue.length ? '다음 문제' : '복습 마치기'}
           </button>
