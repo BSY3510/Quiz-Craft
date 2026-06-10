@@ -6,6 +6,7 @@ import { createClient } from '@/utils/supabase/client'
 import { submitReport } from '@/app/actions/report' // ✅ 신고 서버 액션 추가
 import { useToast } from '@/app/components/Toast'
 import { Modal } from '@/app/components/Modal'
+import { Skeleton } from '@/app/components/Skeleton'
 
 // ✅ 정답(answer_id)과 해설(explanation)은 클라이언트로 받지 않는다(SEC-A).
 //    제출 후 서버 채점 결과(GradeResult)로만 노출된다.
@@ -69,7 +70,19 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
     fetchQuestions()
   }, [categoryId, supabase])
 
-  if (isLoading) return <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-900"><p className="text-slate-500 dark:text-slate-400 font-bold animate-pulse">문제를 준비 중입니다...</p></div>
+  if (isLoading) return (
+    <main className="flex min-h-screen flex-col items-center bg-slate-50 dark:bg-slate-900 p-4 pt-8">
+      <div className="w-full max-w-md space-y-6">
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-8 w-32 rounded-lg" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+        <Skeleton className="h-2 w-full rounded-full" />
+        <Skeleton className="h-44 w-full rounded-xl" />
+        {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
+      </div>
+    </main>
+  )
   if (questions.length === 0) return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
       <p className="text-slate-600 dark:text-slate-300 mb-4 font-bold">이 분야에는 아직 등록된 문제가 없습니다.</p>
