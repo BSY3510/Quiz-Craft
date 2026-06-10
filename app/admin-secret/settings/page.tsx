@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
@@ -60,6 +60,36 @@ export default function AdminSettingsPage() {
     }
     load()
   }, [supabase])
+
+  // 분야 멀티셀렉트 드롭다운(이름순 정렬 + 검색 + 바깥 클릭 닫힘)
+  const [catOpen, setCatOpen] = useState(false)
+  const [catSearch, setCatSearch] = useState('')
+  const catBoxRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!catOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (catBoxRef.current && !catBoxRef.current.contains(e.target as Node)) setCatOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [catOpen])
+
+  const sortedCategories = useMemo(
+    () => [...categories].sort((a, b) => a.name.localeCompare(b.name, 'ko')),
+    [categories]
+  )
+  const visibleCategories = useMemo(() => {
+    const q = catSearch.trim().toLowerCase()
+    return q ? sortedCategories.filter((c) => c.name.toLowerCase().includes(q)) : sortedCategories
+  }, [sortedCategories, catSearch])
+
+  const selectedSummary = useMemo(() => {
+    const names = sortedCategories.filter((c) => autoGenCategoryIds.includes(c.id)).map((c) => c.name)
+    if (names.length === 0) return ''
+    if (names.length <= 2) return names.join(', ')
+    return `${names.slice(0, 2).join(', ')} 외 ${names.length - 2}개`
+  }, [sortedCategories, autoGenCategoryIds])
 
   const toggleCategoryId = (id: string) => {
     setAutoGenCategoryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
@@ -153,25 +183,76 @@ export default function AdminSettingsPage() {
               </select>
             </div>
 
-            {/* 선택 모드일 때만 분야 체크박스 */}
+            {/* 선택 모드일 때만 분야 멀티셀렉트(펼침형) */}
             {autoGenMode === 'selected' && (
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">출제 분야 선택</label>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  출제 분야 선택 {autoGenCategoryIds.length > 0 && <span className="text-indigo-600 dark:text-indigo-400">({autoGenCategoryIds.length})</span>}
+                </label>
                 {categories.length === 0 ? (
                   <p className="text-xs text-slate-400 dark:text-slate-500">활성 분야가 없습니다.</p>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1">
-                    {categories.map((cat) => (
-                      <label key={cat.id} className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 text-sm text-slate-700 dark:text-slate-200">
-                        <input
-                          type="checkbox"
-                          checked={autoGenCategoryIds.includes(cat.id)}
-                          onChange={() => toggleCategoryId(cat.id)}
-                          className="shrink-0"
-                        />
-                        <span className="truncate">{cat.name}</span>
-                      </label>
-                    ))}
+                  <div className="relative" ref={catBoxRef}>
+                    {/* 요약 버튼 (셀렉트처럼 보임) */}
+                    <button
+                      type="button"
+                      onClick={() => setCatOpen((v) => !v)}
+                      className="w-full p-2.5 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-left flex items-center justify-between gap-2"
+                    >
+                      <span className={`truncate ${selectedSummary ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                        {selectedSummary || '분야를 선택하세요'}
+                      </span>
+                      <span className="shrink-0 text-slate-400 dark:text-slate-500">{catOpen ? '▲' : '▼'}</span>
+                    </button>
+
+                    {/* 펼침 패널 */}
+                    {catOpen && (
+                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg overflow-hidden">
+                        <div className="p-2 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={catSearch}
+                            onChange={(e) => setCatSearch(e.target.value)}
+                            placeholder="분야 검색..."
+                            className="flex-1 min-w-0 p-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setAutoGenCategoryIds(sortedCategories.map((c) => c.id))}
+                            className="shrink-0 text-xs font-bold px-2 py-1.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
+                          >
+                            전체
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAutoGenCategoryIds([])}
+                            className="shrink-0 text-xs font-bold px-2 py-1.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
+                          >
+                            해제
+                          </button>
+                        </div>
+                        <div className="max-h-56 overflow-y-auto p-1">
+                          {visibleCategories.length === 0 ? (
+                            <p className="text-xs text-slate-400 dark:text-slate-500 p-3 text-center">검색 결과가 없습니다.</p>
+                          ) : (
+                            visibleCategories.map((cat) => (
+                              <label
+                                key={cat.id}
+                                className="flex items-center gap-2 px-2.5 py-2 rounded-md cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 text-sm text-slate-700 dark:text-slate-200"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={autoGenCategoryIds.includes(cat.id)}
+                                  onChange={() => toggleCategoryId(cat.id)}
+                                  className="shrink-0"
+                                />
+                                <span className="truncate">{cat.name}</span>
+                              </label>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
