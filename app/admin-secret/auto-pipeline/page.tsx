@@ -31,8 +31,9 @@ export default function AutoPipelinePage() {
     const formData = new FormData(e.currentTarget)
     const category = formData.get('category') as string
     const count = parseInt(formData.get('count') as string, 10)
+    const type = (formData.get('type') as string) === 'true-false' ? 'true-false' : 'multiple-choice'
 
-    const result = await runAutoPipeline(category, count)
+    const result = await runAutoPipeline(category, count, type)
     if (result.error) {
       setResultMsg(`❌ 실패: ${result.error}`)
     } else {
@@ -79,6 +80,13 @@ export default function AutoPipelinePage() {
                   <option value="20">20 문항 (대량)</option>
                 </select>
               </div>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">문제 유형</label>
+              <select name="type" className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-slate-800">
+                <option value="multiple-choice">객관식 (4지선다)</option>
+                <option value="true-false">OX (참/거짓)</option>
+              </select>
             </div>
             <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
               <button type="submit" disabled={isLoading || categories.length === 0} className="w-full p-4 font-black text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-600 transition-colors">

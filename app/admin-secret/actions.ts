@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { checkAdmin } from '@/utils/auth'
-import { buildPrompt, normalizeList, normalizeAndValidate, parseJsonLoose, QUESTION_RESPONSE_SCHEMA } from './questionSchema'
+import { buildPrompt, buildTypeNote, coerceType, normalizeList, normalizeAndValidate, parseJsonLoose, QUESTION_RESPONSE_SCHEMA } from './questionSchema'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { revalidatePath } from 'next/cache'
 
@@ -14,6 +14,7 @@ export async function generateQuizDraft(formData: FormData) {
   const supabase = await createClient()
   const categoryId = formData.get('category') as string
   const count = parseInt(formData.get('count') as string, 10) || 3
+  const type = (formData.get('type') as string) === 'true-false' ? 'true-false' : 'multiple-choice'
 
   try {
     // ✅ DB에서 저장된 시스템 프롬프트 + 모델 불러오기
@@ -38,7 +39,7 @@ export async function generateQuizDraft(formData: FormData) {
       categoryName: cat?.name || categoryId,
       count,
       guide: cat?.prompt || '',
-    })
+    }) + buildTypeNote(type)
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
     const modelName = settings.gemini_model || process.env.GEMINI_MODEL_VERSION || 'gemini-3.1-flash-lite'
@@ -55,7 +56,7 @@ export async function generateQuizDraft(formData: FormData) {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const result = await model.generateContent(systemPrompt)
-        const list = normalizeList(parseJsonLoose(result.response.text()))
+        const list = coerceType(normalizeList(parseJsonLoose(result.response.text())), type)
         if (list.length > 0) { generatedQuestions = list; parseErr = null; break }
         parseErr = new Error('생성된 문제가 없습니다.')
       } catch (e) {

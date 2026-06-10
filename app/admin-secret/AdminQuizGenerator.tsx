@@ -80,6 +80,13 @@ export default function AdminQuizGenerator() {
               </select>
             </div>
             <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">문제 유형</label>
+              <select name="type" className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-slate-800">
+                <option value="multiple-choice">객관식 (4지선다)</option>
+                <option value="true-false">OX (참/거짓)</option>
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">생성 개수</label>
               <select name="count" className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-slate-800">
                 <option value="1">1 문항</option>

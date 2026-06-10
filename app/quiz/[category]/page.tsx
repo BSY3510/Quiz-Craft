@@ -204,8 +204,9 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
             </pre>
           )}
 
-          <div className="flex flex-col gap-3">
+          <div className={currentQuestion.type === 'true-false' ? 'grid grid-cols-2 gap-3' : 'flex flex-col gap-3'}>
             {currentQuestion.options.map((option) => {
+              const isOX = currentQuestion.type === 'true-false'
               const isSelected = selectedOption === option.id
               // ✅ 정답 여부는 제출 후 서버 결과로만 판단
               const isAnswer = result?.answerId === option.id
@@ -220,7 +221,11 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
               }
 
               return (
-                <button key={option.id} onClick={() => handleSelect(option.id)} className={`w-full p-4 rounded-lg border-2 text-left transition-all ${optionClass}`}>
+                <button
+                  key={option.id}
+                  onClick={() => handleSelect(option.id)}
+                  className={`rounded-lg border-2 transition-all ${isOX ? 'p-6 text-center text-lg font-bold' : 'w-full p-4 text-left'} ${optionClass}`}
+                >
                   {option.text}
                 </button>
               )

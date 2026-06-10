@@ -4,13 +4,14 @@ import { createClient } from '@/utils/supabase/server'
 import { checkAdmin } from '@/utils/auth'
 import { revalidatePath } from 'next/cache'
 import { generateForCategory } from './core'
+import type { GenQuestionType } from '../questionSchema'
 
-export async function runAutoPipeline(categoryId: string, count: number) {
+export async function runAutoPipeline(categoryId: string, count: number, type: GenQuestionType = 'multiple-choice') {
   const c = await checkAdmin()
   if (!c.ok) return { error: c.error }
 
   const supabase = await createClient()
-  const r = await generateForCategory(supabase, categoryId, count)
+  const r = await generateForCategory(supabase, categoryId, count, type)
 
   if (!r.ok) return { error: r.error }
 

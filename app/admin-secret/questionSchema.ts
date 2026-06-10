@@ -58,6 +58,26 @@ export function buildPrompt(
     .replace(/\{\{category_guide\}\}/g, opts.guide || '')
 }
 
+export type GenQuestionType = 'multiple-choice' | 'true-false'
+
+// 출제 유형 지시(객관식=기본, OX=true-false). 마스터 프롬프트 뒤에 덧붙인다.
+// OX는 마스터의 "4지선다" 류 지시를 덮어써야 하므로 강하게 명시한다.
+export function buildTypeNote(type: string): string {
+  if (type !== 'true-false') return ''
+  return `\n\n[중요·문제 유형 강제] 위 지시 중 보기 개수에 관한 내용은 무시하고, 이번에는 반드시 모든 문제를 OX(참/거짓) 형식으로 출제하세요:
+- type: "true-false"
+- question_text: 참인지 거짓인지 판별 가능한 단정적 진술문 (질문형·의문문 금지)
+- options: 정확히 2개 — [{"id":"O","text":"맞다 (O)"},{"id":"X","text":"틀리다 (X)"}]
+- answer_id: "O" 또는 "X" 중 하나
+- explanation: 왜 맞거나 틀린지에 대한 근거`
+}
+
+// 요청 유형이 OX면 결과의 type 을 'true-false' 로 확정(모델이 누락/오기해도 보정).
+export function coerceType(questions: NormalizedQuestion[], type: string): NormalizedQuestion[] {
+  if (type === 'true-false') questions.forEach((q) => { q.type = 'true-false' })
+  return questions
+}
+
 export interface NormalizedQuestion {
   type: string
   question_text: string

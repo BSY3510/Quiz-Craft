@@ -3,6 +3,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import {
   buildPrompt,
   buildAvoidanceNote,
+  buildTypeNote,
+  coerceType,
   filterNearDuplicates,
   normalizeAndValidate,
   buildValidationPrompt,
@@ -11,6 +13,7 @@ import {
   QUESTION_RESPONSE_SCHEMA,
   VALIDATION_RESPONSE_SCHEMA,
   type NormalizedQuestion,
+  type GenQuestionType,
 } from '../questionSchema'
 
 export interface PipelineResult {
@@ -28,7 +31,8 @@ export interface PipelineResult {
 export async function generateForCategory(
   supabase: SupabaseClient,
   categoryId: string,
-  count: number
+  count: number,
+  type: GenQuestionType = 'multiple-choice'
 ): Promise<PipelineResult> {
   const { data: settings } = await supabase
     .from('site_settings')
@@ -61,7 +65,7 @@ export async function generateForCategory(
       categoryName: cat?.name || categoryId,
       count,
       guide: cat?.prompt || '',
-    }) + buildAvoidanceNote(existingTexts)
+    }) + buildTypeNote(type) + buildAvoidanceNote(existingTexts)
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
   const modelName = settings.gemini_model || process.env.GEMINI_MODEL_VERSION || 'gemini-3.1-flash-lite'
@@ -95,6 +99,7 @@ export async function generateForCategory(
   if (!questions) {
     return { ok: false, error: `생성 결과 검증 실패(재시도 초과): ${lastErr}` }
   }
+  coerceType(questions, type) // OX 요청이면 type 확정
 
   // 중복 방지(2): 기존 문제 및 배치 내부와 근접 중복인 항목 제거
   const deduped = filterNearDuplicates(questions, existingTexts)
