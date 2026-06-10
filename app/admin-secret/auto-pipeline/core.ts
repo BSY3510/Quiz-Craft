@@ -4,6 +4,7 @@ import {
   buildPrompt,
   buildAvoidanceNote,
   buildTypeNote,
+  buildDifficultyNote,
   coerceType,
   filterNearDuplicates,
   normalizeAndValidate,
@@ -65,7 +66,7 @@ export async function generateForCategory(
       categoryName: cat?.name || categoryId,
       count,
       guide: cat?.prompt || '',
-    }) + buildTypeNote(type) + buildAvoidanceNote(existingTexts)
+    }) + buildTypeNote(type) + buildDifficultyNote() + buildAvoidanceNote(existingTexts)
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
   const modelName = settings.gemini_model || process.env.GEMINI_MODEL_VERSION || 'gemini-3.1-flash-lite'
@@ -126,6 +127,7 @@ export async function generateForCategory(
     options: q.options,
     answer_id: q.answer_id,
     explanation: q.explanation,
+    difficulty: q.difficulty,
     status: validFlags[i] ? 'active' : 'pending_review',
   }))
 

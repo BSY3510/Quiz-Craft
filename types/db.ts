@@ -9,6 +9,9 @@ export type QuestionStatus = 'active' | 'pending_review' | 'archived' | (string 
 // questions.type: 'multiple-choice'. OX 도입 시 'true-false' 추가(Phase 9).
 export type QuestionType = 'multiple-choice' | 'true-false' | (string & {})
 
+// questions.difficulty: 'easy' | 'medium' | 'hard' (Phase 9). 기본 'medium'.
+export type Difficulty = 'easy' | 'medium' | 'hard'
+
 // reports.status
 export type ReportStatus = 'pending' | 'resolved' | 'dismissed' | (string & {})
 
@@ -47,6 +50,7 @@ export interface Question {
   options: QuestionOption[]
   answer_id: string
   explanation: string
+  difficulty: Difficulty
   status: QuestionStatus
   created_at: string
 }

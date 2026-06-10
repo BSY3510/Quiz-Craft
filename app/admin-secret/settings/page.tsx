@@ -35,6 +35,7 @@ export default function AdminSettingsPage() {
   const [autoGenMode, setAutoGenMode] = useState<'rotation' | 'selected'>('rotation')
   const [autoGenCategoryIds, setAutoGenCategoryIds] = useState<string[]>([])
   const [autoGenCount, setAutoGenCount] = useState(5)
+  const [autoGenOxRatio, setAutoGenOxRatio] = useState(0)
   const [isSavingAutoGen, setIsSavingAutoGen] = useState(false)
 
   useEffect(() => {
@@ -42,7 +43,7 @@ export default function AdminSettingsPage() {
       const [{ data }, { data: cats }] = await Promise.all([
         supabase
           .from('site_settings')
-          .select('google_login_enabled, gemini_model, auto_generate_enabled, auto_generate_mode, auto_generate_category_ids, auto_generate_count')
+          .select('google_login_enabled, gemini_model, auto_generate_enabled, auto_generate_mode, auto_generate_category_ids, auto_generate_count, auto_generate_ox_ratio')
           .eq('id', 1)
           .single(),
         supabase.from('categories').select('id, name').eq('active', true).order('created_at'),
@@ -54,6 +55,7 @@ export default function AdminSettingsPage() {
         setAutoGenMode(data.auto_generate_mode === 'selected' ? 'selected' : 'rotation')
         setAutoGenCategoryIds(Array.isArray(data.auto_generate_category_ids) ? data.auto_generate_category_ids : [])
         setAutoGenCount(data.auto_generate_count ?? 5)
+        setAutoGenOxRatio(data.auto_generate_ox_ratio ?? 0)
       }
       if (cats) setCategories(cats)
       setIsLoading(false)
@@ -97,7 +99,7 @@ export default function AdminSettingsPage() {
 
   const handleSaveAutoGenConfig = async () => {
     setIsSavingAutoGen(true)
-    const res = await setAutoGenerateConfig({ mode: autoGenMode, categoryIds: autoGenCategoryIds, count: autoGenCount })
+    const res = await setAutoGenerateConfig({ mode: autoGenMode, categoryIds: autoGenCategoryIds, count: autoGenCount, oxRatio: autoGenOxRatio })
     setIsSavingAutoGen(false)
     if (res.error) return toast.error(res.error)
     toast.success('자동 출제 설정이 저장되었습니다.')
@@ -272,6 +274,27 @@ export default function AdminSettingsPage() {
                 ))}
               </select>
               <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">무료 한도·함수 시간 한도를 고려해 1회 실행당 일부 분야만 채웁니다(문항 수가 클수록 처리 분야 수는 줄 수 있음).</p>
+            </div>
+
+            {/* OX 비율 */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                OX 비율 <span className="text-indigo-600 dark:text-indigo-400">{autoGenOxRatio}%</span>
+                <span className="font-normal text-slate-400 dark:text-slate-500"> (나머지 {100 - autoGenOxRatio}%는 객관식)</span>
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={10}
+                value={autoGenOxRatio}
+                onChange={(e) => setAutoGenOxRatio(Number(e.target.value))}
+                disabled={isLoading}
+                className="w-full accent-indigo-600"
+              />
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                예: 문항 수 5 · OX 40% → 객관식 3 + OX 2. 0%면 전부 객관식, 100%면 전부 OX입니다.
+              </p>
             </div>
 
             <button

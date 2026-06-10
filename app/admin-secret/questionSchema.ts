@@ -28,8 +28,9 @@ export const QUESTION_RESPONSE_SCHEMA: ResponseSchema = {
       },
       answer_id: { type: SchemaType.STRING },
       explanation: { type: SchemaType.STRING },
+      difficulty: { type: SchemaType.STRING },
     },
-    required: ['question_text', 'options', 'answer_id', 'explanation'],
+    required: ['question_text', 'options', 'answer_id', 'explanation', 'difficulty'],
   },
 }
 
@@ -78,6 +79,14 @@ export function coerceType(questions: NormalizedQuestion[], type: string): Norma
   return questions
 }
 
+export type Difficulty = 'easy' | 'medium' | 'hard'
+const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard']
+
+// 각 문제에 난이도 부여 지시(생성 프롬프트 뒤에 덧붙임). 객관식·OX 공통.
+export function buildDifficultyNote(): string {
+  return `\n\n[난이도 부여] 각 문제에 difficulty 필드를 반드시 포함하세요. 문제의 실제 난이도에 맞춰 "easy"(기초·정의), "medium"(응용·이해), "hard"(심화·함정/예외) 중 하나로 정하고, 한쪽에 치우치지 말고 자연스럽게 분포시키세요.`
+}
+
 export interface NormalizedQuestion {
   type: string
   question_text: string
@@ -85,6 +94,7 @@ export interface NormalizedQuestion {
   options: { id: string; text: string }[]
   answer_id: string
   explanation: string
+  difficulty: Difficulty
 }
 
 export function normalizeQuestion(q: unknown): NormalizedQuestion {
@@ -95,6 +105,7 @@ export function normalizeQuestion(q: unknown): NormalizedQuestion {
     return { id: String(oo.id ?? ''), text: String(oo.text ?? '') }
   })
   const codeSnippet = obj.code_snippet ?? obj.codeSnippet ?? null
+  const rawDiff = String(obj.difficulty ?? '').toLowerCase() as Difficulty
   return {
     type: (obj.type as string) || 'multiple-choice',
     question_text: String(obj.question_text ?? obj.question ?? '').trim(),
@@ -102,6 +113,7 @@ export function normalizeQuestion(q: unknown): NormalizedQuestion {
     options,
     answer_id: String(obj.answer_id ?? obj.answerId ?? ''),
     explanation: String(obj.explanation ?? '').trim(),
+    difficulty: DIFFICULTIES.includes(rawDiff) ? rawDiff : 'medium',
   }
 }
 

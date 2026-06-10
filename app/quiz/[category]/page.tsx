@@ -7,6 +7,7 @@ import { submitReport } from '@/app/actions/report' // ✅ 신고 서버 액션 
 import { useToast } from '@/app/components/Toast'
 import { Modal } from '@/app/components/Modal'
 import { Skeleton } from '@/app/components/Skeleton'
+import { DifficultyBadge } from '@/app/components/ui'
 
 // ✅ 정답(answer_id)과 해설(explanation)은 클라이언트로 받지 않는다(SEC-A).
 //    제출 후 서버 채점 결과(GradeResult)로만 노출된다.
@@ -16,6 +17,7 @@ interface Question {
   question_text: string;
   code_snippet: string | null;
   options: { id: string; text: string }[];
+  difficulty: string;
 }
 
 interface GradeResult {
@@ -52,7 +54,7 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
       // ✅ 정답/해설 컬럼은 가져오지 않는다.
       const { data, error } = await supabase
         .from('questions')
-        .select('id, type, question_text, code_snippet, options')
+        .select('id, type, question_text, code_snippet, options, difficulty')
         .eq('category_id', categoryId)
         .eq('status', 'active')
 
@@ -194,6 +196,12 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
         </div>
 
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6 relative overflow-hidden">
+          <div className="flex items-center gap-2 mb-3">
+            <DifficultyBadge difficulty={currentQuestion.difficulty} />
+            {currentQuestion.type === 'true-false' && (
+              <span className="inline-block px-2 py-1 text-xs font-bold rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">OX</span>
+            )}
+          </div>
           <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 leading-relaxed mb-4">
             {currentQuestion.question_text}
           </h2>

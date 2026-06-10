@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import type { Question } from '@/types/db'
+import { DifficultyBadge } from '@/app/components/ui'
 
 export default async function CategoryReviewPage({ params }: { params: Promise<{ category: string }> }) {
   // Next.js 15+ params Unwrapping
@@ -53,6 +54,7 @@ export default async function CategoryReviewPage({ params }: { params: Promise<{
                 <div key={q.id} className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                   <div className="flex gap-2 items-center mb-4">
                     <span className="text-sm font-bold text-slate-400 dark:text-slate-500">오답 복습 #{index + 1}</span>
+                    <DifficultyBadge difficulty={q.difficulty} />
                   </div>
 
                   <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">{q.question_text}</h3>

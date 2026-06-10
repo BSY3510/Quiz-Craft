@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   // 3. 자동 출제 설정 확인 (활성화 여부 + 분야 선정 모드)
   const { data: cfg } = await supabase
     .from('site_settings')
-    .select('auto_generate_enabled, auto_generate_mode, auto_generate_category_ids, auto_generate_count')
+    .select('auto_generate_enabled, auto_generate_mode, auto_generate_category_ids, auto_generate_count, auto_generate_ox_ratio')
     .eq('id', 1)
     .single()
   if (cfg && cfg.auto_generate_enabled === false) {
@@ -41,6 +41,13 @@ export async function GET(request: NextRequest) {
     : []
   // 분야당 생성 문항 수 (관리자 설정값, 1~20 범위로 보정)
   const perCategoryCount = Math.min(20, Math.max(1, Number(cfg?.auto_generate_count) || COUNT_PER_CATEGORY))
+  // OX 비율(%) → 분야당 객관식/OX 문항 수로 분배
+  const oxRatio = Math.min(100, Math.max(0, Number(cfg?.auto_generate_ox_ratio) || 0))
+  const oxCount = Math.round((perCategoryCount * oxRatio) / 100)
+  const mcCount = perCategoryCount - oxCount
+  const batches: Array<{ type: 'multiple-choice' | 'true-false'; n: number }> = []
+  if (mcCount > 0) batches.push({ type: 'multiple-choice', n: mcCount })
+  if (oxCount > 0) batches.push({ type: 'true-false', n: oxCount })
 
   // 4. 활성 분야 조회 (선택 모드면 관리자가 지정한 분야로 제한)
   const { data: cats, error: catErr } = await supabase
@@ -72,17 +79,19 @@ export async function GET(request: NextRequest) {
   withCounts.sort((a, b) => a.activeCount - b.activeCount)
   const targets = withCounts.slice(0, CATEGORIES_PER_RUN)
 
-  // 6. 분야별 순차 생성 (Gemini 무료 한도·함수 시간 한도 고려해 순차 처리)
-  const results: Array<{ category: string; ok: boolean; detail: unknown }> = []
+  // 6. 분야별 순차 생성. OX 비율이 있으면 객관식/OX 배치를 나눠 생성한다.
+  const results: Array<{ category: string; type: string; ok: boolean; detail: unknown }> = []
   for (const t of targets) {
-    try {
-      const r = await generateForCategory(supabase, t.id, perCategoryCount)
-      results.push({ category: t.name, ok: r.ok, detail: r })
-    } catch (e) {
-      console.error(`Cron generate failed for ${t.name}:`, e)
-      results.push({ category: t.name, ok: false, detail: { error: e instanceof Error ? e.message : String(e) } })
+    for (const b of batches) {
+      try {
+        const r = await generateForCategory(supabase, t.id, b.n, b.type)
+        results.push({ category: t.name, type: b.type, ok: r.ok, detail: r })
+      } catch (e) {
+        console.error(`Cron generate failed for ${t.name} (${b.type}):`, e)
+        results.push({ category: t.name, type: b.type, ok: false, detail: { error: e instanceof Error ? e.message : String(e) } })
+      }
     }
   }
 
-  return NextResponse.json({ ok: true, mode, ranAt: new Date().toISOString(), results })
+  return NextResponse.json({ ok: true, mode, oxRatio, ranAt: new Date().toISOString(), results })
 }

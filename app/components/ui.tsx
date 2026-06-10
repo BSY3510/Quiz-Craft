@@ -75,6 +75,18 @@ export function Badge({
   )
 }
 
+/* ───────── 난이도 배지 ───────── */
+const DIFFICULTY_META: Record<string, { label: string; tone: BadgeTone }> = {
+  easy: { label: '쉬움', tone: 'green' },
+  medium: { label: '보통', tone: 'blue' },
+  hard: { label: '어려움', tone: 'red' },
+}
+
+export function DifficultyBadge({ difficulty, className = '' }: { difficulty?: string | null; className?: string }) {
+  const meta = DIFFICULTY_META[difficulty || 'medium'] ?? DIFFICULTY_META.medium
+  return <Badge tone={meta.tone} className={className}>{meta.label}</Badge>
+}
+
 // 신고/문제/회원 상태 → Badge 톤 매핑 헬퍼
 export function statusTone(status: string): BadgeTone {
   switch (status) {

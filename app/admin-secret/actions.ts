@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { checkAdmin } from '@/utils/auth'
-import { buildPrompt, buildTypeNote, coerceType, normalizeList, normalizeAndValidate, parseJsonLoose, QUESTION_RESPONSE_SCHEMA } from './questionSchema'
+import { buildPrompt, buildTypeNote, buildDifficultyNote, coerceType, normalizeList, normalizeAndValidate, parseJsonLoose, QUESTION_RESPONSE_SCHEMA } from './questionSchema'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { revalidatePath } from 'next/cache'
 
@@ -39,7 +39,7 @@ export async function generateQuizDraft(formData: FormData) {
       categoryName: cat?.name || categoryId,
       count,
       guide: cat?.prompt || '',
-    }) + buildTypeNote(type)
+    }) + buildTypeNote(type) + buildDifficultyNote()
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
     const modelName = settings.gemini_model || process.env.GEMINI_MODEL_VERSION || 'gemini-3.1-flash-lite'
@@ -107,6 +107,7 @@ export async function saveReviewedQuestions(category: string, questions: unknown
       options: q.options,
       answer_id: q.answer_id,
       explanation: q.explanation,
+      difficulty: q.difficulty,
       status: 'active',
     }))
 
@@ -181,12 +182,14 @@ export async function setAutoGenerateConfig(opts: {
   mode: 'rotation' | 'selected'
   categoryIds: string[]
   count: number
+  oxRatio: number
 }) {
   const c = await checkAdmin()
   if (!c.ok) return { error: c.error }
 
   const mode = opts.mode === 'selected' ? 'selected' : 'rotation'
   const count = Math.min(20, Math.max(1, Math.floor(Number(opts.count)) || 5))
+  const oxRatio = Math.min(100, Math.max(0, Math.floor(Number(opts.oxRatio)) || 0))
   const categoryIds = Array.isArray(opts.categoryIds)
     ? opts.categoryIds.filter((x) => typeof x === 'string')
     : []
@@ -202,6 +205,7 @@ export async function setAutoGenerateConfig(opts: {
       auto_generate_mode: mode,
       auto_generate_category_ids: categoryIds,
       auto_generate_count: count,
+      auto_generate_ox_ratio: oxRatio,
     })
     .eq('id', 1)
 

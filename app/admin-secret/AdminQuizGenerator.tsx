@@ -116,7 +116,21 @@ export default function AdminQuizGenerator() {
           <div className="space-y-6">
             {drafts.map((draft, idx) => (
               <div key={idx} className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 dark:bg-slate-900/50 dark:border-slate-700">
-                <div className="font-bold text-slate-500 dark:text-slate-400 text-sm">문제 {idx + 1}</div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-bold text-slate-500 dark:text-slate-400 text-sm">문제 {idx + 1}</div>
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">
+                    난이도
+                    <select
+                      value={draft.difficulty}
+                      onChange={(e) => handleUpdateDraft(idx, 'difficulty', e.target.value)}
+                      className="p-1.5 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-100"
+                    >
+                      <option value="easy">쉬움</option>
+                      <option value="medium">보통</option>
+                      <option value="hard">어려움</option>
+                    </select>
+                  </label>
+                </div>
                 <textarea
                   value={draft.question_text}
                   onChange={(e) => handleUpdateDraft(idx, 'question_text', e.target.value)}

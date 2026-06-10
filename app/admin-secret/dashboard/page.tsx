@@ -8,7 +8,7 @@ import { updateQuestion, setQuestionStatus, setQuestionsStatus } from '../action
 import { useToast } from '@/app/components/Toast'
 import { Modal } from '@/app/components/Modal'
 import { Pagination } from '@/app/components/Pagination'
-import { Badge, statusTone } from '@/app/components/ui'
+import { Badge, statusTone, DifficultyBadge } from '@/app/components/ui'
 import type { AdminQuestionRow, Category } from '@/types/db'
 
 type DashQuestion = AdminQuestionRow & { errorRate: number; totalAttempts: number }
@@ -22,6 +22,7 @@ export default function AdminDashboardStatsPage() {
   const [categories, setCategories] = useState<Pick<Category, 'id' | 'name'>[]>([])
   const [filterCategory, setFilterCategory] = useState<string>('all')
   const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [filterDifficulty, setFilterDifficulty] = useState<string>('all')
   const [sortType, setSortType] = useState<string>('recent')
   const [isLoading, setIsLoading] = useState(true)
 
@@ -92,6 +93,7 @@ export default function AdminDashboardStatsPage() {
   const filteredAndSorted = questions
     .filter(q => filterCategory === 'all' || q.category_id === filterCategory)
     .filter(q => filterStatus === 'all' || q.status === filterStatus)
+    .filter(q => filterDifficulty === 'all' || q.difficulty === filterDifficulty)
     .sort((a, b) => {
       if (sortType === 'recent') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       if (sortType === 'errorRate') return b.errorRate - a.errorRate
@@ -107,6 +109,7 @@ export default function AdminDashboardStatsPage() {
   // 필터/정렬 변경 시 1페이지로 리셋하는 핸들러 (effect 대신 이벤트에서 처리)
   const onFilterCategory = (v: string) => { setFilterCategory(v); setCurrentPage(1) }
   const onFilterStatus = (v: string) => { setFilterStatus(v); setCurrentPage(1) }
+  const onFilterDifficulty = (v: string) => { setFilterDifficulty(v); setCurrentPage(1) }
   const onSortType = (v: string) => { setSortType(v); setCurrentPage(1) }
 
   return (
@@ -154,6 +157,15 @@ export default function AdminDashboardStatsPage() {
             </select>
           </div>
           <div className="flex-1">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">난이도 필터</label>
+            <select value={filterDifficulty} onChange={(e) => onFilterDifficulty(e.target.value)} className="w-full p-2 border rounded-lg text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-700">
+              <option value="all">전체 난이도</option>
+              <option value="easy">쉬움</option>
+              <option value="medium">보통</option>
+              <option value="hard">어려움</option>
+            </select>
+          </div>
+          <div className="flex-1">
             <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">정렬 방식</label>
             <select value={sortType} onChange={(e) => onSortType(e.target.value)} className="w-full p-2 border rounded-lg text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-700">
               <option value="recent">최신 등록순</option>
@@ -174,6 +186,7 @@ export default function AdminDashboardStatsPage() {
                 <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
                   <tr>
                     <th className="p-4">분야</th>
+                    <th className="p-4">난이도</th>
                     <th className="p-4 w-1/2">문제 내용 (클릭하여 전체 수정)</th>
                     <th className="p-4">오답률</th>
                     <th className="p-4">상태</th>
@@ -184,6 +197,7 @@ export default function AdminDashboardStatsPage() {
                   {paginatedQuestions.map(q => (
                     <tr key={q.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer" onClick={() => setEditingQuestion({...q})}>
                       <td className="p-4 font-bold text-blue-600 dark:text-blue-400 uppercase">{q.category_id}</td>
+                      <td className="p-4"><DifficultyBadge difficulty={q.difficulty} /></td>
                       <td className="p-4">{q.question_text} ✏️</td>
                       <td className="p-4">
                         <span className={`font-bold ${q.errorRate > 50 ? 'text-red-500 dark:text-red-400' : 'text-slate-600 dark:text-slate-300'}`}>{q.errorRate.toFixed(1)}%</span>
