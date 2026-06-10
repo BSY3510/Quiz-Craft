@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { CategoryList } from './CategoryList'
+import OnboardingTour from './OnboardingTour'
 
 export default async function QuizDashboardPage() {
   const supabase = await createClient()
@@ -56,6 +57,9 @@ export default async function QuizDashboardPage() {
             </div>
           </div>
         </header>
+
+        {/* 온보딩 튜토리얼 (첫 방문 1회 자동 + 사용법 보기) */}
+        <OnboardingTour />
 
         {/* 내 학습 현황 배너 */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-5 text-white shadow-md flex justify-between items-center">
