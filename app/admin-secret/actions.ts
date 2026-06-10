@@ -163,24 +163,38 @@ export async function setSystemPrompt(prompt: string) {
   return { success: true }
 }
 
+const QUESTION_STATUSES = ['active', 'pending_review', 'archived'] as const
+type QStatus = (typeof QUESTION_STATUSES)[number]
+
 // 6-1. 문제 상태 변경 (검증 큐 승인/반려). active=노출, pending_review=대기, archived=보관
-export async function setQuestionStatus(
-  id: string,
-  status: 'active' | 'pending_review' | 'archived'
-) {
+export async function setQuestionStatus(id: string, status: QStatus) {
   const c = await checkAdmin()
   if (!c.ok) return { error: c.error }
-
-  if (!['active', 'pending_review', 'archived'].includes(status)) {
-    return { error: '잘못된 상태값입니다.' }
-  }
+  if (!QUESTION_STATUSES.includes(status)) return { error: '잘못된 상태값입니다.' }
 
   const supabase = await createClient()
   const { error } = await supabase.from('questions').update({ status }).eq('id', id)
 
   if (error) return { error: '상태 변경 중 오류가 발생했습니다.' }
   revalidatePath('/quiz')
+  revalidatePath('/admin-secret')
   return { success: true }
+}
+
+// 6-2. 문제 상태 일괄 변경 (검증 큐 일괄 승인/반려)
+export async function setQuestionsStatus(ids: string[], status: QStatus) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
+  if (!QUESTION_STATUSES.includes(status)) return { error: '잘못된 상태값입니다.' }
+  if (!ids.length) return { error: '대상 문제가 없습니다.' }
+
+  const supabase = await createClient()
+  const { error } = await supabase.from('questions').update({ status }).in('id', ids)
+
+  if (error) return { error: '일괄 처리 중 오류가 발생했습니다.' }
+  revalidatePath('/quiz')
+  revalidatePath('/admin-secret')
+  return { success: true, count: ids.length }
 }
 
 // 6. AI 모델 버전 저장 (site_settings.gemini_model)

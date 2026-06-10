@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
-import { updateQuestion, setQuestionStatus } from '../actions'
+import { updateQuestion, setQuestionStatus, setQuestionsStatus } from '../actions'
 import { useToast } from '@/app/components/Toast'
 import { Modal } from '@/app/components/Modal'
 import { Pagination } from '@/app/components/Pagination'
@@ -75,6 +75,19 @@ export default function AdminDashboardStatsPage() {
     toast.success(status === 'active' ? '승인되어 노출됩니다.' : '반려되어 보관 처리되었습니다.')
   }
 
+  // 검증 대기 일괄 승인 (현재 분야 필터에 해당하는 검증대기 전체)
+  const handleApproveAll = async () => {
+    const targets = questions.filter(
+      (q) => q.status === 'pending_review' && (filterCategory === 'all' || q.category_id === filterCategory)
+    )
+    if (!targets.length) return
+    const ids = targets.map((q) => q.id)
+    const res = await setQuestionsStatus(ids, 'active')
+    if (res.error) { toast.error(res.error); return }
+    setQuestions(questions.map(q => ids.includes(q.id) ? { ...q, status: 'active' } : q))
+    toast.success(`${ids.length}건을 일괄 승인했습니다.`)
+  }
+
   // 필터링 및 정렬 파이프라인
   const filteredAndSorted = questions
     .filter(q => filterCategory === 'all' || q.category_id === filterCategory)
@@ -107,15 +120,20 @@ export default function AdminDashboardStatsPage() {
           <Link href={adminPath} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">← 관리자 메인</Link>
         </header>
 
-        {/* 검증 대기 안내 */}
+        {/* 검증 대기 안내 + 일괄 승인 */}
         {pendingCount > 0 && (
-          <button
-            onClick={() => onFilterStatus('pending_review')}
-            className="w-full text-left bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
-          >
-            <span className="font-bold text-amber-800 dark:text-amber-300">🕒 검증 대기 {pendingCount}건</span>
-            <span className="text-sm text-amber-700 dark:text-amber-400 ml-2">AI가 생성한 문제가 승인을 기다리고 있습니다. 클릭해 모아보기.</span>
-          </button>
+          <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4">
+            <button onClick={() => onFilterStatus('pending_review')} className="flex-1 text-left">
+              <span className="font-bold text-amber-800 dark:text-amber-300">🕒 검증 대기 {pendingCount}건</span>
+              <span className="text-sm text-amber-700 dark:text-amber-400 ml-2">클릭해 모아보기</span>
+            </button>
+            <button
+              onClick={handleApproveAll}
+              className="whitespace-nowrap px-3 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition-colors"
+            >
+              ✓ 전체 승인
+            </button>
+          </div>
         )}
 
         <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex gap-4">

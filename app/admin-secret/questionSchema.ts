@@ -59,6 +59,45 @@ export function normalizeList(raw: unknown): NormalizedQuestion[] {
   return raw.map(normalizeQuestion)
 }
 
+// ── AI 2차 검증 (독립 호출용 프롬프트 + 결과 파서) ──
+// 생성된 문제를 별도 AI 호출로 검수하기 위한 프롬프트.
+export function buildValidationPrompt(questions: NormalizedQuestion[]): string {
+  const list = questions.map((q, i) => ({
+    index: i,
+    question_text: q.question_text,
+    code_snippet: q.code_snippet,
+    options: q.options,
+    answer_id: q.answer_id,
+    explanation: q.explanation,
+  }))
+  return `당신은 매우 엄격한 프로그래밍 퀴즈 검수자입니다. 아래 문제들을 하나씩 검토하세요.
+각 문제에 대해 다음을 모두 만족하면 valid=true, 하나라도 어긋나면 valid=false 로 판정하세요:
+1) 표시된 정답(answer_id)이 기술적으로 정확하다.
+2) 정답이 정확히 1개이며, 복수 정답이거나 논란의 여지가 없다.
+3) 문제와 보기가 명확하고 오해의 소지가 없다.
+4) 해설이 정답을 올바르게 뒷받침한다.
+
+반드시 아래 JSON 배열 형식으로만 응답하세요(다른 텍스트·마크다운 금지):
+[{ "index": 0, "valid": true, "reason": "간단한 사유" }]
+
+검토할 문제 목록(JSON):
+${JSON.stringify(list)}`
+}
+
+// 검증 응답을 boolean[] 로 변환. AI가 명시적으로 valid=true 라고 한 인덱스만 통과(보수적).
+export function parseValidation(raw: unknown, count: number): boolean[] {
+  const flags = new Array<boolean>(count).fill(false)
+  if (!Array.isArray(raw)) throw new Error('validation response is not an array')
+  for (const item of raw) {
+    const obj = (item ?? {}) as Record<string, unknown>
+    const idx = Number(obj.index)
+    if (Number.isInteger(idx) && idx >= 0 && idx < count) {
+      flags[idx] = obj.valid === true
+    }
+  }
+  return flags
+}
+
 // 정규화 + 검증. 하나라도 무효면 실패(어디가 문제인지 사유 포함).
 export function normalizeAndValidate(
   raw: unknown

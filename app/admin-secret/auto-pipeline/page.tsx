@@ -33,8 +33,16 @@ export default function AutoPipelinePage() {
     const count = parseInt(formData.get('count') as string, 10)
 
     const result = await runAutoPipeline(category, count)
-    if (result.error) setResultMsg(`❌ 실패: ${result.error}`)
-    else setResultMsg(`✅ 성공: ${result.insertedCount}개 생성 → 검증 큐에 추가됨. 문제 관리에서 승인하면 노출됩니다.`)
+    if (result.error) {
+      setResultMsg(`❌ 실패: ${result.error}`)
+    } else {
+      const approved = result.approvedCount ?? 0
+      const queued = result.queuedCount ?? 0
+      setResultMsg(
+        `✅ ${result.insertedCount}개 생성 · AI 검증 통과 ${approved}개 즉시 노출` +
+          (queued > 0 ? ` · ${queued}개는 검증 보류(문제 관리 > 검증 대기에서 확인)` : '')
+      )
+    }
     setIsLoading(false)
   }
 
@@ -44,7 +52,7 @@ export default function AutoPipelinePage() {
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100">AI 완전 자동화 파이프라인</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">AI가 문제를 출제하고 자가 검증하여 즉시 서비스에 배포합니다.</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">AI가 출제 → 독립 AI 검수 → 통과분 즉시 노출. 검수 탈락분은 검증 큐로 보류됩니다.</p>
           </div>
           <Link href={adminPath} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">
             ← 관리자 메인으로

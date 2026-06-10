@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { checkAdmin } from '@/utils/auth'
-import { buildPrompt, normalizeAndValidate } from '../questionSchema'
+import { buildPrompt, normalizeAndValidate, buildValidationPrompt, parseValidation } from '../questionSchema'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { revalidatePath } from 'next/cache'
 
@@ -45,13 +45,24 @@ export async function runAutoPipeline(categoryId: string, count: number) {
     const result = await model.generateContent(systemPrompt)
     const responseText = result.response.text()
 
-    // ✅ 정규화·검증(BUG-4): 무효한 문제는 DB 오염 없이 거부
+    // ✅ 1차: 구조 정규화·검증(BUG-4) — 무효 형식은 DB 오염 없이 거부
     const checked = normalizeAndValidate(JSON.parse(responseText))
     if (!checked.ok) {
       return { error: `생성 결과 검증 실패: ${checked.error}` }
     }
 
-    const insertData = checked.questions.map((q) => ({
+    // ✅ 2차: 독립 AI 호출로 내용 검수(정답 정확성·복수정답·명확성).
+    //    실패 시 안전하게 전부 검증 큐(pending_review)로 보낸다.
+    let validFlags: boolean[]
+    try {
+      const valResult = await model.generateContent(buildValidationPrompt(checked.questions))
+      validFlags = parseValidation(JSON.parse(valResult.response.text()), checked.questions.length)
+    } catch (e) {
+      console.error('AI validation failed:', e)
+      validFlags = new Array(checked.questions.length).fill(false)
+    }
+
+    const insertData = checked.questions.map((q, i) => ({
       category_id: categoryId,
       type: q.type,
       question_text: q.question_text,
@@ -59,7 +70,8 @@ export async function runAutoPipeline(categoryId: string, count: number) {
       options: q.options,
       answer_id: q.answer_id,
       explanation: q.explanation,
-      status: 'pending_review', // ✅ 검증 큐: 관리자 승인 전까지 사용자에게 노출 안 됨
+      // ✅ AI 검증 통과분은 즉시 노출(active), 그 외는 검증 큐(pending_review)로 보류
+      status: validFlags[i] ? 'active' : 'pending_review',
     }))
 
     const { error } = await supabase.from('questions').insert(insertData)
@@ -67,7 +79,11 @@ export async function runAutoPipeline(categoryId: string, count: number) {
     if (error) throw error
 
     revalidatePath('/quiz')
-    return { success: true, insertedCount: insertData.length }
+    revalidatePath('/admin-secret')
+
+    const approvedCount = validFlags.filter(Boolean).length
+    const queuedCount = insertData.length - approvedCount
+    return { success: true, insertedCount: insertData.length, approvedCount, queuedCount }
   } catch (error) {
     console.error('Auto Pipeline Error:', error)
     return { error: '자동화 파이프라인 실행 중 오류가 발생했습니다.' }
