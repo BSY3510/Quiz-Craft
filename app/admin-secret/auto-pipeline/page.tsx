@@ -38,9 +38,11 @@ export default function AutoPipelinePage() {
     } else {
       const approved = result.approvedCount ?? 0
       const queued = result.queuedCount ?? 0
+      const skipped = result.skippedDuplicates ?? 0
       setResultMsg(
-        `✅ ${result.insertedCount}개 생성 · AI 검증 통과 ${approved}개 즉시 노출` +
-          (queued > 0 ? ` · ${queued}개는 검증 보류(문제 관리 > 검증 대기에서 확인)` : '')
+        `✅ ${result.insertedCount}개 등록 · AI 검증 통과 ${approved}개 즉시 노출` +
+          (queued > 0 ? ` · ${queued}개는 검증 보류(문제 관리 > 검증 대기에서 확인)` : '') +
+          (skipped > 0 ? ` · 중복 ${skipped}개 제외` : '')
       )
     }
     setIsLoading(false)

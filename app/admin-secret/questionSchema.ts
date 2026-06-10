@@ -184,6 +184,58 @@ export function parseValidation(raw: unknown, count: number): boolean[] {
   return flags
 }
 
+// ── 중복 방지 (Phase 8C/8D) ──
+// (1) 프롬프트 주입용: 기존 문제 목록을 "이런 건 또 내지 말라"는 회피 지시로 변환.
+export function buildAvoidanceNote(existingTexts: string[], max = 40): string {
+  const list = existingTexts.filter(Boolean).slice(0, max)
+  if (list.length === 0) return ''
+  const bullets = list
+    .map((t) => `- ${t.replace(/\s+/g, ' ').trim().slice(0, 120)}`)
+    .join('\n')
+  return `\n\n[중복 회피] 아래는 이미 출제된 문제들입니다. 의미가 중복되거나 사실상 동일한 문제는 절대 출제하지 말고, 새로운 개념·관점·난이도로 출제하세요:\n${bullets}`
+}
+
+// 텍스트를 비교용 토큰 집합으로 정규화(소문자·기호 제거·공백 분리).
+function dupTokens(s: string): Set<string> {
+  return new Set(
+    (s || '')
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .split(/\s+/)
+      .filter(Boolean)
+  )
+}
+
+function jaccard(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0
+  let inter = 0
+  for (const x of a) if (b.has(x)) inter++
+  return inter / (a.size + b.size - inter)
+}
+
+// (2) 생성 결과에서 기존 문제 및 배치 내부와 근접 중복인 항목을 제거.
+// threshold(기본 0.82) 이상 유사하면 중복으로 간주. 보수적으로 잡아 정상 신규는 살린다.
+export function filterNearDuplicates(
+  candidates: NormalizedQuestion[],
+  existingTexts: string[],
+  threshold = 0.82
+): NormalizedQuestion[] {
+  const existingSets = existingTexts.filter(Boolean).map(dupTokens)
+  const acceptedSets: Set<string>[] = []
+  const out: NormalizedQuestion[] = []
+  for (const q of candidates) {
+    const s = dupTokens(q.question_text)
+    const dup =
+      existingSets.some((e) => jaccard(s, e) >= threshold) ||
+      acceptedSets.some((e) => jaccard(s, e) >= threshold)
+    if (!dup) {
+      out.push(q)
+      acceptedSets.push(s)
+    }
+  }
+  return out
+}
+
 // 정규화 + 검증. 하나라도 무효면 실패(어디가 문제인지 사유 포함).
 export function normalizeAndValidate(
   raw: unknown

@@ -160,6 +160,54 @@ export async function setGoogleLogin(enabled: boolean) {
   return { success: true }
 }
 
+// 4-1. 자동 출제(cron) 활성화 토글 (site_settings)
+export async function setAutoGenerate(enabled: boolean) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('site_settings')
+    .update({ auto_generate_enabled: enabled })
+    .eq('id', 1)
+
+  if (error) return { error: '설정 변경 중 오류가 발생했습니다.' }
+  return { success: true }
+}
+
+// 4-2. 자동 출제 대상/개수 설정 (분야 선정 모드 + 선택 분야 + 분야당 문항 수)
+export async function setAutoGenerateConfig(opts: {
+  mode: 'rotation' | 'selected'
+  categoryIds: string[]
+  count: number
+}) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
+
+  const mode = opts.mode === 'selected' ? 'selected' : 'rotation'
+  const count = Math.min(20, Math.max(1, Math.floor(Number(opts.count)) || 5))
+  const categoryIds = Array.isArray(opts.categoryIds)
+    ? opts.categoryIds.filter((x) => typeof x === 'string')
+    : []
+
+  if (mode === 'selected' && categoryIds.length === 0) {
+    return { error: '분야 선택 모드에서는 최소 1개 분야를 선택해야 합니다.' }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('site_settings')
+    .update({
+      auto_generate_mode: mode,
+      auto_generate_category_ids: categoryIds,
+      auto_generate_count: count,
+    })
+    .eq('id', 1)
+
+  if (error) return { error: '설정 저장 중 오류가 발생했습니다.' }
+  return { success: true }
+}
+
 // 5. AI 시스템 프롬프트 저장 (site_settings)
 export async function setSystemPrompt(prompt: string) {
   const c = await checkAdmin()
