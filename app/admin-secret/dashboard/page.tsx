@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
 import { updateQuestion, setGoogleLogin } from '../actions'
 import { useToast } from '@/app/components/Toast'
+import { Modal } from '@/app/components/Modal'
 import type { AdminQuestionRow, Category } from '@/types/db'
 
 type DashQuestion = AdminQuestionRow & { errorRate: number; totalAttempts: number }
@@ -189,11 +190,11 @@ export default function AdminDashboardStatsPage() {
         )}
       </div>
 
-      {/* 문제 수정을 위한 모달 본체 */}
-      {editingQuestion && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
-            <h2 className="text-xl font-bold text-slate-800">문제 수정</h2>
+      {/* 문제 수정 모달 */}
+      <Modal open={!!editingQuestion} onClose={() => setEditingQuestion(null)} className="max-w-2xl" labelledBy="q-edit-title">
+        {editingQuestion && (
+          <div className="space-y-4">
+            <h2 id="q-edit-title" className="text-xl font-bold text-slate-800">문제 수정</h2>
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">질문 내용</label>
               <textarea value={editingQuestion.question_text} onChange={(e) => setEditingQuestion({...editingQuestion, question_text: e.target.value})} className="w-full p-3 border border-slate-300 rounded-lg text-slate-800" rows={2} />
@@ -221,8 +222,8 @@ export default function AdminDashboardStatsPage() {
               <button onClick={() => setEditingQuestion(null)} className="flex-1 p-3 bg-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-300">취소</button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </main>
   )
 }

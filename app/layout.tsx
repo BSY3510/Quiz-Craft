@@ -6,6 +6,7 @@ import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ToastProvider } from "./components/Toast";
+import { ConfirmProvider } from "./components/Confirm";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,7 +24,9 @@ export default function RootLayout({
     <html lang="ko">
       <body className={inter.className}>
         <ToastProvider>
-          {children}
+          <ConfirmProvider>
+            {children}
+          </ConfirmProvider>
         </ToastProvider>
         {/* ✅ 컴포넌트 추가 (UI에는 보이지 않으며 백그라운드에서 동작합니다) */}
         <Analytics />

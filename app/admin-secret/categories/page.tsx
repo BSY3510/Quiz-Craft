@@ -6,12 +6,15 @@ import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
 import { createCategory, toggleCategoryActive, updateCategory, deleteCategory } from './actions'
 import { useToast } from '@/app/components/Toast'
+import { useConfirm } from '@/app/components/Confirm'
+import { Modal } from '@/app/components/Modal'
 import type { Category } from '@/types/db'
 
 export default function AdminCategoriesPage() {
   const supabase = createClient()
   const adminPath = useAdminPath()
   const toast = useToast()
+  const confirm = useConfirm()
 
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -86,7 +89,13 @@ export default function AdminCategoriesPage() {
 
   // 4. 분야 완전 삭제
   const handleDeleteCategory = async (id: string) => {
-    if (!confirm(`⚠️ 정말로 [${id}] 분야를 완전히 삭제하시겠습니까?\n삭제 시 해당 분야의 카테고리 정보가 증발합니다.`)) return
+    const ok = await confirm({
+      title: '분야 삭제',
+      message: `정말로 [${id}] 분야를 완전히 삭제할까요?\n삭제 시 해당 분야 정보가 사라집니다.`,
+      confirmText: '삭제',
+      danger: true,
+    })
+    if (!ok) return
 
     const res = await deleteCategory(id)
     if (!res.error) {
@@ -205,11 +214,11 @@ export default function AdminCategoriesPage() {
         </section>
       </div>
 
-      {/* 분야 이름 수정 모달 팝업 */}
-      {editingCategory && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
-            <h2 className="text-lg font-black text-slate-800">📚 분야 정보 수정</h2>
+      {/* 분야 정보 수정 모달 */}
+      <Modal open={!!editingCategory} onClose={() => setEditingCategory(null)} className="max-w-sm" labelledBy="cat-edit-title">
+        {editingCategory && (
+          <div className="space-y-4">
+            <h2 id="cat-edit-title" className="text-lg font-black text-slate-800">📚 분야 정보 수정</h2>
             <div>
               <label className="block text-xs font-bold text-slate-400 mb-1">분야 ID (변경 불가)</label>
               <input type="text" value={editingCategory.id} disabled className="w-full p-2.5 bg-slate-100 border border-slate-200 rounded-lg font-mono text-sm text-slate-400 uppercase" />
@@ -239,8 +248,8 @@ export default function AdminCategoriesPage() {
               <button onClick={() => setEditingCategory(null)} className="flex-1 p-3 bg-slate-100 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-200">취소</button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </main>
   )
 }

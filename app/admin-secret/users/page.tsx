@@ -5,12 +5,14 @@ import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
 import { useToast } from '@/app/components/Toast'
+import { useConfirm } from '@/app/components/Confirm'
 import type { Profile } from '@/types/db'
 
 export default function AdminUsersManagementPage() {
   const supabase = createClient()
   const adminPath = useAdminPath()
   const toast = useToast()
+  const confirm = useConfirm()
 
   const [users, setUsers] = useState<Profile[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -32,7 +34,13 @@ export default function AdminUsersManagementPage() {
   }, [supabase])
 
   const handleUpdateStatus = async (userId: string, newStatus: string) => {
-    if (!confirm(`해당 회원의 상태를 '${newStatus === 'approved' ? '승인' : '정지'}'(으)로 변경하시겠습니까?`)) return
+    const ok = await confirm({
+      title: '회원 상태 변경',
+      message: `해당 회원의 상태를 '${newStatus === 'approved' ? '승인' : '정지'}'(으)로 변경할까요?`,
+      confirmText: '변경',
+      danger: newStatus !== 'approved',
+    })
+    if (!ok) return
 
     // ✅ 관리자 상태 변경은 정의자 함수 경유(직접 profiles update 금지, SEC-C/D)
     const { error } = await supabase

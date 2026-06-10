@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { submitReport } from '@/app/actions/report' // ✅ 신고 서버 액션 추가
 import { useToast } from '@/app/components/Toast'
+import { Modal } from '@/app/components/Modal'
 
 // ✅ 정답(answer_id)과 해설(explanation)은 클라이언트로 받지 않는다(SEC-A).
 //    제출 후 서버 채점 결과(GradeResult)로만 노출된다.
@@ -239,42 +240,40 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
         </div>
       </div>
 
-      {/* ✅ 오류 신고 모달 팝업 추가 */}
-      {isReportModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <h3 className="text-lg font-bold text-slate-800 mb-2">🚨 문제 오류 신고</h3>
-            <p className="text-sm text-slate-500 mb-4">문제의 오타나 잘못된 해설 등 오류를 알려주시면 검토 후 반영하겠습니다.</p>
+      {/* ✅ 오류 신고 모달 */}
+      <Modal
+        open={isReportModalOpen}
+        onClose={() => { setIsReportModalOpen(false); setReportReason('') }}
+        className="max-w-md"
+        labelledBy="report-title"
+      >
+        <h3 id="report-title" className="text-lg font-bold text-slate-800 mb-2">🚨 문제 오류 신고</h3>
+        <p className="text-sm text-slate-500 mb-4">문제의 오타나 잘못된 해설 등 오류를 알려주시면 검토 후 반영하겠습니다.</p>
 
-            <textarea
-              value={reportReason}
-              onChange={(e) => setReportReason(e.target.value)}
-              placeholder="예: 해설에 설명된 개념이 최신 버전과 다릅니다."
-              className="w-full p-3 border border-slate-300 rounded-lg text-sm text-slate-800 mb-4"
-              rows={4}
-            />
+        <textarea
+          value={reportReason}
+          onChange={(e) => setReportReason(e.target.value)}
+          placeholder="예: 해설에 설명된 개념이 최신 버전과 다릅니다."
+          className="w-full p-3 border border-slate-300 rounded-lg text-sm text-slate-800 mb-4"
+          rows={4}
+        />
 
-            <div className="flex gap-2">
-              <button
-                onClick={handleReportSubmit}
-                disabled={isSubmittingReport || !reportReason.trim()}
-                className="flex-1 py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 disabled:opacity-50 transition-colors"
-              >
-                {isSubmittingReport ? '접수 중...' : '신고하기'}
-              </button>
-              <button
-                onClick={() => {
-                  setIsReportModalOpen(false)
-                  setReportReason('')
-                }}
-                className="flex-1 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
-              >
-                취소
-              </button>
-            </div>
-          </div>
+        <div className="flex gap-2">
+          <button
+            onClick={handleReportSubmit}
+            disabled={isSubmittingReport || !reportReason.trim()}
+            className="flex-1 py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 disabled:opacity-50 transition-colors"
+          >
+            {isSubmittingReport ? '접수 중...' : '신고하기'}
+          </button>
+          <button
+            onClick={() => { setIsReportModalOpen(false); setReportReason('') }}
+            className="flex-1 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
+          >
+            취소
+          </button>
         </div>
-      )}
+      </Modal>
     </main>
   )
 }

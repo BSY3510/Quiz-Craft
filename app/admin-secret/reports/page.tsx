@@ -7,6 +7,7 @@ import { useAdminPath } from '../useAdminPath'
 import { updateReportStatus } from './actions'
 import { updateQuestion } from '../actions'
 import { useToast } from '@/app/components/Toast'
+import { Modal } from '@/app/components/Modal'
 import type { Question, Category } from '@/types/db'
 
 // 신고 목록 임베드된 문제(정답/해설은 제외, 수정 시점에만 채워짐)
@@ -194,11 +195,11 @@ export default function AdminReportsPage() {
         )}
       </div>
 
-      {/* 모달 팝업 생략 (기존 코드와 완전히 동일하므로 그대로 유지하시면 됩니다) */}
-      {editingQuestion && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-5 shadow-2xl">
-            <h2 className="text-xl font-black text-slate-800">문제 수정</h2>
+      {/* 문제 수정 모달 */}
+      <Modal open={!!editingQuestion} onClose={() => setEditingQuestion(null)} className="max-w-2xl" labelledBy="rep-edit-title">
+        {editingQuestion && (
+          <div className="space-y-5">
+            <h2 id="rep-edit-title" className="text-xl font-black text-slate-800">문제 수정</h2>
             <div>
               <textarea value={editingQuestion.question_text} onChange={(e) => setEditingQuestion({...editingQuestion, question_text: e.target.value})} className="w-full p-3 border rounded-lg text-slate-800" rows={2}/>
             </div>
@@ -225,8 +226,8 @@ export default function AdminReportsPage() {
               <button onClick={() => setEditingQuestion(null)} className="flex-1 p-4 bg-slate-100 text-slate-700 font-bold rounded-xl">취소</button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </main>
   )
 }
