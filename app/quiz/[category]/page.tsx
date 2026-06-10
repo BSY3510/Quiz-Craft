@@ -166,6 +166,20 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
           </div>
         </div>
 
+        {/* 진행률 바 */}
+        <div className="mb-6">
+          <div className="flex justify-between text-xs font-bold text-slate-400 dark:text-slate-500 mb-1">
+            <span>진행률</span>
+            <span>{currentIndex + 1} / {questions.length}</span>
+          </div>
+          <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-500 transition-all duration-300"
+              style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
+            />
+          </div>
+        </div>
+
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6 relative overflow-hidden">
           <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 leading-relaxed mb-4">
             {currentQuestion.question_text}
