@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { checkAdmin } from '@/utils/auth'
-import { buildPrompt, normalizeAndValidate, buildValidationPrompt, parseValidation } from '../questionSchema'
+import { buildPrompt, normalizeAndValidate, buildValidationPrompt, parseValidation, parseJsonLoose } from '../questionSchema'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { revalidatePath } from 'next/cache'
 
@@ -46,7 +46,7 @@ export async function runAutoPipeline(categoryId: string, count: number) {
     const responseText = result.response.text()
 
     // ✅ 1차: 구조 정규화·검증(BUG-4) — 무효 형식은 DB 오염 없이 거부
-    const checked = normalizeAndValidate(JSON.parse(responseText))
+    const checked = normalizeAndValidate(parseJsonLoose(responseText))
     if (!checked.ok) {
       return { error: `생성 결과 검증 실패: ${checked.error}` }
     }
@@ -56,7 +56,7 @@ export async function runAutoPipeline(categoryId: string, count: number) {
     let validFlags: boolean[]
     try {
       const valResult = await model.generateContent(buildValidationPrompt(checked.questions))
-      validFlags = parseValidation(JSON.parse(valResult.response.text()), checked.questions.length)
+      validFlags = parseValidation(parseJsonLoose(valResult.response.text()), checked.questions.length)
     } catch (e) {
       console.error('AI validation failed:', e)
       validFlags = new Array(checked.questions.length).fill(false)

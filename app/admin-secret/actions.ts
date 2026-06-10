@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { checkAdmin } from '@/utils/auth'
-import { buildPrompt, normalizeList, normalizeAndValidate } from './questionSchema'
+import { buildPrompt, normalizeList, normalizeAndValidate, parseJsonLoose } from './questionSchema'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { revalidatePath } from 'next/cache'
 
@@ -51,7 +51,7 @@ export async function generateQuizDraft(formData: FormData) {
     const result = await model.generateContent(systemPrompt)
     const responseText = result.response.text()
     // ✅ snake_case/camelCase 어느 컨벤션이든 DB 컬럼 형태로 정규화(BUG-4)
-    const generatedQuestions = normalizeList(JSON.parse(responseText))
+    const generatedQuestions = normalizeList(parseJsonLoose(responseText))
 
     // 선택한 분야를 함께 반환해 저장 시 일괄 적용
     return { success: true, data: generatedQuestions, category: categoryId }

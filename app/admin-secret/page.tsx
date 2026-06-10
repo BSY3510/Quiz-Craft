@@ -14,12 +14,13 @@ export default async function AdminHomePage() {
   const adminPath = `/admin-${process.env.NEXT_PUBLIC_ADMIN_PATH_SUFFIX || process.env.ADMIN_PATH_SUFFIX || 'secret'}`
 
   // KPI 집계 (병렬). RLS상 관리자가 전체를 볼 수 있다.
+  // questions는 answer_id/explanation 컬럼 select가 회수돼 있어 select('*')가 막힌다 → 'id'로 카운트
   const [members, pending, questions, questionsPending, reportsPending] = await Promise.all([
-    supabase.from('profiles').select('*', { count: 'exact', head: true }),
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-    supabase.from('questions').select('*', { count: 'exact', head: true }),
-    supabase.from('questions').select('*', { count: 'exact', head: true }).eq('status', 'pending_review'),
-    supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    supabase.from('questions').select('id', { count: 'exact', head: true }),
+    supabase.from('questions').select('id', { count: 'exact', head: true }).eq('status', 'pending_review'),
+    supabase.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
   ])
 
   const KPIS = [

@@ -59,6 +59,26 @@ export function normalizeList(raw: unknown): NormalizedQuestion[] {
   return raw.map(normalizeQuestion)
 }
 
+// LLM 응답에서 JSON 본문만 추출해 파싱(코드펜스·앞뒤 잡텍스트·설명 덧붙임 대비).
+// "Unexpected non-whitespace character after JSON" 류 오류를 방지한다.
+export function parseJsonLoose(text: string): unknown {
+  let t = (text ?? '').trim()
+  if (t.startsWith('```')) {
+    t = t.replace(/^```(?:json)?/i, '').replace(/```\s*$/i, '').trim()
+  }
+  const a1 = t.indexOf('[')
+  if (a1 !== -1) {
+    const a2 = t.lastIndexOf(']')
+    if (a2 > a1) return JSON.parse(t.slice(a1, a2 + 1))
+  }
+  const o1 = t.indexOf('{')
+  if (o1 !== -1) {
+    const o2 = t.lastIndexOf('}')
+    if (o2 > o1) return JSON.parse(t.slice(o1, o2 + 1))
+  }
+  return JSON.parse(t)
+}
+
 // ── AI 2차 검증 (독립 호출용 프롬프트 + 결과 파서) ──
 // 생성된 문제를 별도 AI 호출로 검수하기 위한 프롬프트.
 export function buildValidationPrompt(questions: NormalizedQuestion[]): string {
