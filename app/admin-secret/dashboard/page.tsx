@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
-import { updateQuestion, setGoogleLogin } from '../actions'
+import { updateQuestion } from '../actions'
 import { useToast } from '@/app/components/Toast'
 import { Modal } from '@/app/components/Modal'
 import { Pagination } from '@/app/components/Pagination'
@@ -24,8 +24,7 @@ export default function AdminDashboardStatsPage() {
   const [sortType, setSortType] = useState<string>('recent')
   const [isLoading, setIsLoading] = useState(true)
 
-  // 소셜 설정 및 모달 관리 상태
-  const [isGoogleEnabled, setIsGoogleEnabled] = useState(false)
+  // 모달 관리 상태
   const [editingQuestion, setEditingQuestion] = useState<DashQuestion | null>(null)
 
   // ✅ 페이지네이션 전용 로컬 상태 추가
@@ -34,9 +33,6 @@ export default function AdminDashboardStatsPage() {
 
   useEffect(() => {
     async function fetchData() {
-      const { data: settings } = await supabase.from('site_settings').select('google_login_enabled').eq('id', 1).single()
-      if (settings) setIsGoogleEnabled(settings.google_login_enabled)
-
       const { data: cats } = await supabase.from('categories').select('id, name')
       if (cats) setCategories(cats)
 
@@ -57,14 +53,6 @@ export default function AdminDashboardStatsPage() {
     }
     fetchData()
   }, [supabase])
-
-  const handleToggleGoogleLogin = async () => {
-    const newValue = !isGoogleEnabled
-    const res = await setGoogleLogin(newValue)
-    if (res.error) { toast.error(res.error); return }
-    setIsGoogleEnabled(newValue)
-    toast.success(`구글 로그인이 ${newValue ? '활성화' : '비활성화'} 되었습니다.`)
-  }
 
   const handleSaveEdit = async () => {
     if (!editingQuestion) return
@@ -101,25 +89,11 @@ export default function AdminDashboardStatsPage() {
       <div className="max-w-6xl mx-auto space-y-6">
         <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100">운영 대시보드 상세</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">학습 콘텐츠 상세 분석 및 서비스 설정</p>
+            <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100">📝 문제 관리</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">등록된 문제를 검색·수정하고 오답률을 확인합니다.</p>
           </div>
           <Link href={adminPath} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">← 관리자 메인</Link>
         </header>
-
-        {/* 글로벌 설정 영역 */}
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">구글 소셜 로그인 연동</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">사용자의 구글 로그인 접근을 허용하거나 차단합니다.</p>
-          </div>
-          <button
-            onClick={handleToggleGoogleLogin}
-            className={`px-4 py-2 font-bold rounded-lg transition-colors ${isGoogleEnabled ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}
-          >
-            {isGoogleEnabled ? '활성화됨 (ON)' : '비활성화됨 (OFF)'}
-          </button>
-        </div>
 
         <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex gap-4">
           <div className="flex-1">
