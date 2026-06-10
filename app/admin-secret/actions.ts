@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { checkAdmin } from '@/utils/auth'
+import { normalizeList, normalizeAndValidate } from './questionSchema'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { revalidatePath } from 'next/cache'
 
@@ -52,9 +53,11 @@ export async function generateQuizDraft(formData: FormData) {
 
     const result = await model.generateContent(systemPrompt)
     const responseText = result.response.text()
-    const generatedQuestions = JSON.parse(responseText)
+    // ✅ snake_case/camelCase 어느 컨벤션이든 DB 컬럼 형태로 정규화(BUG-4)
+    const generatedQuestions = normalizeList(JSON.parse(responseText))
 
-    return { success: true, data: generatedQuestions }
+    // 선택한 분야를 함께 반환해 저장 시 일괄 적용
+    return { success: true, data: generatedQuestions, category: categoryId }
   } catch (error: any) {
     console.error('Gemini API Error:', error)
 
@@ -73,42 +76,36 @@ export async function generateQuizDraft(formData: FormData) {
   }
 }
 
-// 2. 검수 완료된 문제 DB 등록 서버 액션 (수정 없음)
-export async function saveReviewedQuestions(questions: any[]) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+// 2. 검수 완료된 문제 DB 등록 서버 액션 (정규화·검증 + 분야 일괄 적용, BUG-4)
+export async function saveReviewedQuestions(category: string, questions: unknown[]) {
+  const c = await checkAdmin()
+  if (!c.ok) return { success: false, error: c.error }
 
-  if (!user) return { success: false, error: '인증이 필요합니다.' }
+  if (!category) return { success: false, error: '분야가 지정되지 않았습니다.' }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.role !== 'admin') {
-    return { success: false, error: '관리자 권한이 없습니다.' }
-  }
+  const checked = normalizeAndValidate(questions)
+  if (!checked.ok) return { success: false, error: checked.error }
 
   try {
-    const insertData = questions.map((q: any) => ({
-      category_id: q.category_id,
-      type: q.type || 'multiple-choice',
+    const supabase = await createClient()
+    const insertData = checked.questions.map((q) => ({
+      category_id: category,
+      type: q.type,
       question_text: q.question_text,
       code_snippet: q.code_snippet,
       options: q.options,
       answer_id: q.answer_id,
       explanation: q.explanation,
-      status: 'active'
+      status: 'active',
     }))
 
     const { error } = await supabase.from('questions').insert(insertData)
 
     if (error) throw error
-    revalidatePath('/quiz') 
-    
+    revalidatePath('/quiz')
+
     return { success: true }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Save to DB Error:', error)
     return { success: false, error: 'DB 등록 중 오류가 발생했습니다.' }
   }

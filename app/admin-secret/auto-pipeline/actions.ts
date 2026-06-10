@@ -1,18 +1,16 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { checkAdmin } from '@/utils/auth'
+import { normalizeAndValidate } from '../questionSchema'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { revalidatePath } from 'next/cache'
 
 export async function runAutoPipeline(categoryId: string, count: number) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
+
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) return { error: '인증이 필요합니다.' }
-
-  // 관리자 권한 검증
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') return { error: '권한이 없습니다.' }
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
   const model = genAI.getGenerativeModel({
@@ -50,18 +48,22 @@ export async function runAutoPipeline(categoryId: string, count: number) {
   try {
     const result = await model.generateContent(systemPrompt)
     const responseText = result.response.text()
-    const generatedQuestions = JSON.parse(responseText)
 
-    // AI가 생성한 문제를 DB에 자동 삽입(Bulk Insert)
-    const insertData = generatedQuestions.map((q: any) => ({
+    // ✅ 정규화·검증(BUG-4): 무효한 문제는 DB 오염 없이 거부
+    const checked = normalizeAndValidate(JSON.parse(responseText))
+    if (!checked.ok) {
+      return { error: `생성 결과 검증 실패: ${checked.error}` }
+    }
+
+    const insertData = checked.questions.map((q) => ({
       category_id: categoryId,
-      type: q.type || 'multiple-choice',
-      question_text: q.question,
-      code_snippet: q.codeSnippet,
+      type: q.type,
+      question_text: q.question_text,
+      code_snippet: q.code_snippet,
       options: q.options,
-      answer_id: q.answerId,
+      answer_id: q.answer_id,
       explanation: q.explanation,
-      status: 'active' // 사람의 검수 없이 즉시 활성화
+      status: 'active', // 사람의 검수 없이 즉시 활성화 (검증 큐는 Phase 8)
     }))
 
     const { error } = await supabase.from('questions').insert(insertData)

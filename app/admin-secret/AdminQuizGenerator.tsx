@@ -12,7 +12,9 @@ export default function AdminQuizGenerator() {
   const [isLoading, setIsLoading] = useState(false)
   
   // ✅ JSON 문자열 대신 객체 배열로 상태 관리 (시각적 UI 렌더링 용도)
-  const [drafts, setDrafts] = useState<any[]>([]) 
+  const [drafts, setDrafts] = useState<any[]>([])
+  // 생성 시 선택한 분야(저장 시 일괄 적용)
+  const [draftCategory, setDraftCategory] = useState<string>('')
 
   useEffect(() => {
     async function fetchCategories() {
@@ -31,7 +33,8 @@ export default function AdminQuizGenerator() {
     const result = await generateQuizDraft(formData)
     
     if (result.success) {
-      setDrafts(result.data) // 파싱된 객체 배열 자체를 저장
+      setDrafts(result.data ?? []) // 정규화된 객체 배열
+      setDraftCategory(result.category ?? '')
     } else {
       alert(`❌ 생성 실패: ${result.error}`)
     }
@@ -47,10 +50,11 @@ export default function AdminQuizGenerator() {
 
   const handleSaveToDB = async () => {
     try {
-      const result = await saveReviewedQuestions(drafts)
+      const result = await saveReviewedQuestions(draftCategory, drafts)
       if (result.success) {
         alert('✅ 성공적으로 DB에 등록되었습니다!')
-        setDrafts([]) 
+        setDrafts([])
+        setDraftCategory('')
       } else {
         alert(`❌ 등록 실패: ${result.error}`)
       }
