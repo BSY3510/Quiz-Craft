@@ -5,11 +5,10 @@ import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
 import { updateReportStatus } from './actions'
-import { updateQuestion } from '../actions'
 import { useToast } from '@/app/components/Toast'
-import { Modal } from '@/app/components/Modal'
 import { Pagination } from '@/app/components/Pagination'
 import { Badge, statusTone } from '@/app/components/ui'
+import QuestionEditModal from '../QuestionEditModal'
 import type { Question, Category } from '@/types/db'
 
 // 신고 목록 임베드된 문제(정답/해설은 제외, 수정 시점에만 채워짐)
@@ -79,19 +78,6 @@ export default function AdminReportsPage() {
       return
     }
     setEditingQuestion(full)
-  }
-
-  const handleSaveEdit = async () => {
-    if (!editingQuestion) return
-    const { id, question_text, options, answer_id, explanation } = editingQuestion
-    const res = await updateQuestion(id, { question_text, options, answer_id, explanation })
-    if (!res.error) {
-      setReports(reports.map(r => r.questions?.id === id ? { ...r, questions: { ...r.questions, question_text, options, answer_id, explanation } } : r))
-      setEditingQuestion(null)
-      toast.success('문제가 수정되었습니다!')
-    } else {
-      toast.error(res.error)
-    }
   }
 
   // 필터링 적용
@@ -183,39 +169,12 @@ export default function AdminReportsPage() {
         <Pagination page={currentPage} totalPages={totalPages} onChange={setCurrentPage} />
       </div>
 
-      {/* 문제 수정 모달 */}
-      <Modal open={!!editingQuestion} onClose={() => setEditingQuestion(null)} className="max-w-2xl" labelledBy="rep-edit-title">
-        {editingQuestion && (
-          <div className="space-y-5">
-            <h2 id="rep-edit-title" className="text-xl font-black text-slate-800 dark:text-slate-100">문제 수정</h2>
-            <div>
-              <textarea value={editingQuestion.question_text} onChange={(e) => setEditingQuestion({...editingQuestion, question_text: e.target.value})} className="w-full p-3 border rounded-lg text-slate-800 dark:border-slate-600 dark:bg-slate-700" rows={2}/>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {editingQuestion.options.map((opt, idx) => (
-                <div key={opt.id}>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">보기 {opt.id}</label>
-                  <input value={opt.text} onChange={(e) => { const newOptions = [...editingQuestion.options]; newOptions[idx].text = e.target.value; setEditingQuestion({...editingQuestion, options: newOptions}) }} className="w-full p-3 border rounded-lg text-slate-800 text-sm dark:border-slate-600 dark:bg-slate-700"/>
-                </div>
-              ))}
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">정답 ID</label>
-              <select value={editingQuestion.answer_id} onChange={(e) => setEditingQuestion({...editingQuestion, answer_id: e.target.value})} className="w-full p-3 border rounded-lg text-slate-800 dark:border-slate-600 dark:bg-slate-700">
-                {editingQuestion.options.map((opt) => <option key={opt.id} value={opt.id}>{opt.id}번</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">해설</label>
-              <textarea value={editingQuestion.explanation} onChange={(e) => setEditingQuestion({...editingQuestion, explanation: e.target.value})} className="w-full p-3 border rounded-lg text-slate-800 dark:border-slate-600 dark:bg-slate-700" rows={3}/>
-            </div>
-            <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
-              <button onClick={handleSaveEdit} className="flex-1 p-4 bg-blue-600 text-white font-black rounded-xl">저장하기</button>
-              <button onClick={() => setEditingQuestion(null)} className="flex-1 p-4 bg-slate-100 text-slate-700 font-bold rounded-xl dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600">취소</button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      {/* 문제 수정 모달 (공용 컴포넌트) */}
+      <QuestionEditModal
+        question={editingQuestion}
+        onClose={() => setEditingQuestion(null)}
+        onSaved={(id, fields) => setReports(reports.map(r => r.questions?.id === id ? { ...r, questions: { ...r.questions, ...fields } } : r))}
+      />
     </main>
   )
 }

@@ -9,6 +9,7 @@ import { Modal } from '@/app/components/Modal'
 import { Skeleton } from '@/app/components/Skeleton'
 import { DifficultyBadge } from '@/app/components/ui'
 import QuestionReactions from '@/app/components/QuestionReactions'
+import CodeBlock from '@/app/components/CodeBlock'
 
 // ✅ 정답(answer_id)과 해설(explanation)은 클라이언트로 받지 않는다(SEC-A).
 //    제출 후 서버 채점 결과(GradeResult)로만 노출된다.
@@ -264,9 +265,7 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
           </h2>
 
           {currentQuestion.code_snippet && (
-            <pre className="bg-slate-800 dark:bg-slate-950 text-slate-50 p-4 rounded-lg overflow-x-auto text-sm font-mono mb-6">
-              <code>{currentQuestion.code_snippet}</code>
-            </pre>
+            <CodeBlock code={currentQuestion.code_snippet} className="mb-6" />
           )}
 
           <div className={currentQuestion.type === 'true-false' ? 'grid grid-cols-2 gap-3' : 'flex flex-col gap-3'}>

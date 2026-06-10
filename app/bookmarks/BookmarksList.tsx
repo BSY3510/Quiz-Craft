@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { DifficultyBadge } from '@/app/components/ui'
+import CodeBlock from '@/app/components/CodeBlock'
 import BookmarkRemoveButton from './BookmarkRemoveButton'
 
 export interface BookmarkItem {
@@ -111,11 +112,7 @@ export default function BookmarksList({
 
               <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">{q.question_text}</h3>
 
-              {q.code_snippet && (
-                <pre className="bg-slate-800 dark:bg-slate-950 text-slate-50 p-4 rounded-lg overflow-x-auto text-sm font-mono mb-4">
-                  <code>{q.code_snippet}</code>
-                </pre>
-              )}
+              {q.code_snippet && <CodeBlock code={q.code_snippet} className="mb-4" />}
 
               <div className="bg-green-50 border border-green-200 p-4 rounded-xl mb-4 dark:bg-green-900/20 dark:border-green-900/50">
                 <p className="text-xs font-bold text-green-800 dark:text-green-300 mb-1">정답</p>

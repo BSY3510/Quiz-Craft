@@ -34,3 +34,16 @@
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* 코드 신택스 하이라이팅 (highlight.js) — 코드블록은 항상 다크 배경.
+   highlight.js 토큰 클래스에 대한 경량 다크 팔레트(테마 CSS import 대신 직접 정의). */
+.hljs { color: #e2e8f0; }
+.hljs-comment, .hljs-quote { color: #94a3b8; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-name, .hljs-tag { color: #93c5fd; }
+.hljs-string, .hljs-title, .hljs-section, .hljs-literal, .hljs-type, .hljs-addition, .hljs-template-tag, .hljs-template-variable { color: #86efac; }
+.hljs-number, .hljs-symbol, .hljs-bullet, .hljs-link, .hljs-meta, .hljs-selector-id, .hljs-selector-class { color: #fca5a5; }
+.hljs-attr, .hljs-attribute, .hljs-variable, .hljs-params { color: #fcd34d; }
+.hljs-title.function_, .hljs-function .hljs-title { color: #c4b5fd; }
+.hljs-deletion { color: #fca5a5; }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }

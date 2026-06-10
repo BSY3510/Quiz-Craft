@@ -6,6 +6,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/app/components/Toast'
 import { DifficultyBadge } from '@/app/components/ui'
 import QuestionReactions from '@/app/components/QuestionReactions'
+import CodeBlock from '@/app/components/CodeBlock'
 
 interface QContent {
   id: string
@@ -170,9 +171,7 @@ export default function SrsReview({ categoryId, cards }: { categoryId: string; c
           {isOX && <span className="inline-block px-2 py-1 text-xs font-bold rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">OX</span>}
         </div>
         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 leading-relaxed mb-4">{q.question_text}</h2>
-        {q.code_snippet && (
-          <pre className="bg-slate-800 dark:bg-slate-950 text-slate-50 p-4 rounded-lg overflow-x-auto text-sm font-mono mb-6"><code>{q.code_snippet}</code></pre>
-        )}
+        {q.code_snippet && <CodeBlock code={q.code_snippet} className="mb-6" />}
 
         <div className={isOX ? 'grid grid-cols-2 gap-3' : 'flex flex-col gap-3'}>
           {q.options.map((option) => {
