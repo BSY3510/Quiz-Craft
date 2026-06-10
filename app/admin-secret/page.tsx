@@ -25,32 +25,32 @@ export default async function AdminDashboardPage() {
   ]
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
+    <main className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <div className="max-w-4xl mx-auto space-y-8">
-        
-        <header className="flex justify-between items-end border-b border-slate-200 pb-6">
+
+        <header className="flex justify-between items-end border-b border-slate-200 dark:border-slate-700 pb-6">
           <div>
-            <h1 className="text-3xl font-black text-slate-800">관리자 센터</h1>
-            <p className="text-slate-500 mt-2">콘텐츠 출제 및 운영 관리</p>
+            <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100">관리자 센터</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-2">콘텐츠 출제 및 운영 관리</p>
           </div>
-          <Link href="/quiz" className="text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors bg-white px-4 py-2 rounded-lg border border-slate-200">
+          <Link href="/quiz" className="text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors bg-white px-4 py-2 rounded-lg border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:text-slate-100">
             사용자 화면 가기
           </Link>
         </header>
 
         <section>
-          <h2 className="text-lg font-bold text-slate-800 mb-4">바로가기</h2>
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">바로가기</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {ADMIN_MENUS.map(menu => (
-              <Link key={menu.path} href={menu.path} className="bg-white p-5 rounded-xl border border-slate-200 hover:border-blue-500 hover:shadow-md transition-all group">
-                <h3 className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{menu.name}</h3>
-                <p className="text-sm text-slate-500 mt-1">{menu.desc}</p>
+              <Link key={menu.path} href={menu.path} className="bg-white p-5 rounded-xl border border-slate-200 hover:border-blue-500 hover:shadow-md transition-all group dark:bg-slate-800 dark:border-slate-700 dark:hover:border-blue-500">
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{menu.name}</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{menu.desc}</p>
               </Link>
             ))}
           </div>
         </section>
 
-        <section className="pt-8 border-t border-slate-200">
+        <section className="pt-8 border-t border-slate-200 dark:border-slate-700">
           <AdminQuizGenerator />
         </section>
       </div>

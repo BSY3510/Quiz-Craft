@@ -107,36 +107,36 @@ export default function AdminCategoriesPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6 relative">
+    <main className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 relative">
       <div className="max-w-4xl mx-auto space-y-6">
         <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black text-slate-800">📚 퀴즈 분야 관리</h1>
-            <p className="text-slate-500 mt-1">사용자들이 풀이할 학습 분야(카테고리)를 추가, 수정, 삭제합니다.</p>
+            <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100">📚 퀴즈 분야 관리</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">사용자들이 풀이할 학습 분야(카테고리)를 추가, 수정, 삭제합니다.</p>
           </div>
-          <Link href={adminPath} className="text-sm font-bold text-blue-600 hover:underline">
+          <Link href={adminPath} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">
             ← 관리자 센터로
           </Link>
         </header>
 
         {/* 신규 등록 폼 */}
-        <section className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-          <h2 className="text-sm font-bold text-slate-700 mb-3">✨ 신규 분야 생성</h2>
+        <section className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <h2 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">✨ 신규 분야 생성</h2>
           <form onSubmit={handleCreateCategory} className="flex flex-col sm:flex-row gap-3">
-            <input 
-              type="text" 
-              placeholder="분야 식별 ID (예: nextjs, sql)" 
+            <input
+              type="text"
+              placeholder="분야 식별 ID (예: nextjs, sql)"
               value={newId}
               onChange={(e) => setNewId(e.target.value)}
-              className="flex-1 p-3 border border-slate-300 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
-            <input 
-              type="text" 
-              placeholder="표시용 이름 (예: Next.js, SQL 데이터베이스)" 
+            <input
+              type="text"
+              placeholder="표시용 이름 (예: Next.js, SQL 데이터베이스)"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              className="flex-1 p-3 border border-slate-300 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
             <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 text-sm transition-colors whitespace-nowrap">
@@ -152,25 +152,25 @@ export default function AdminCategoriesPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="🔍 분야 검색 (ID 또는 이름)"
-            className="w-full p-3 pl-4 border border-slate-200 rounded-xl text-sm text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+            className="w-full p-3 pl-4 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
           />
           {keyword && (
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400">{filteredCategories.length}개</span>
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400 dark:text-slate-500">{filteredCategories.length}개</span>
           )}
         </div>
 
         {/* 분야 리스트 테이블 */}
-        <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
           {isLoading ? (
-            <div className="p-8 text-center text-slate-500 font-bold">분야 목록을 불러오는 중...</div>
+            <div className="p-8 text-center text-slate-500 dark:text-slate-400 font-bold">분야 목록을 불러오는 중...</div>
           ) : categories.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">등록된 분야가 없습니다.</div>
+            <div className="p-8 text-center text-slate-500 dark:text-slate-400">등록된 분야가 없습니다.</div>
           ) : filteredCategories.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">&apos;{search}&apos; 검색 결과가 없습니다.</div>
+            <div className="p-8 text-center text-slate-500 dark:text-slate-400">&apos;{search}&apos; 검색 결과가 없습니다.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
+                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
                   <tr>
                     <th className="p-4 font-bold">식별 ID</th>
                     <th className="p-4 font-bold">분야명 (표시 이름)</th>
@@ -178,29 +178,29 @@ export default function AdminCategoriesPage() {
                     <th className="p-4 font-bold text-right">관리 액션</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-800">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-800 dark:text-slate-200">
                   {filteredCategories.map(category => (
-                    <tr key={category.id} className="hover:bg-slate-50">
-                      <td className="p-4 font-mono text-xs font-bold text-slate-500 uppercase">{category.id}</td>
+                    <tr key={category.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                      <td className="p-4 font-mono text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">{category.id}</td>
                       <td className="p-4 font-bold">{category.name}</td>
                       <td className="p-4">
                         <button 
                           onClick={() => handleToggleActive(category.id, category.active)}
-                          className={`px-3 py-1 text-xs font-bold rounded-full transition-colors ${category.active ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
+                          className={`px-3 py-1 text-xs font-bold rounded-full transition-colors ${category.active ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300' : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300'}`}
                         >
                           {category.active ? '● 노출 활성화' : '○ 숨김 비활성화'}
                         </button>
                       </td>
                       <td className="p-4 text-right space-x-2 whitespace-nowrap">
-                        <button 
+                        <button
                           onClick={() => setEditingCategory({ ...category })}
-                          className="px-2.5 py-1.5 bg-slate-100 text-slate-600 text-xs font-bold rounded hover:bg-slate-200 border border-slate-200"
+                          className="px-2.5 py-1.5 bg-slate-100 text-slate-600 text-xs font-bold rounded hover:bg-slate-200 border border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-600"
                         >
                           ✏️ 수정
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDeleteCategory(category.id)}
-                          className="px-2.5 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded hover:bg-red-100 border border-red-100"
+                          className="px-2.5 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded hover:bg-red-100 border border-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-900/50 dark:hover:bg-red-900/50"
                         >
                           🗑️ 영구 삭제
                         </button>
@@ -218,34 +218,34 @@ export default function AdminCategoriesPage() {
       <Modal open={!!editingCategory} onClose={() => setEditingCategory(null)} className="max-w-sm" labelledBy="cat-edit-title">
         {editingCategory && (
           <div className="space-y-4">
-            <h2 id="cat-edit-title" className="text-lg font-black text-slate-800">📚 분야 정보 수정</h2>
+            <h2 id="cat-edit-title" className="text-lg font-black text-slate-800 dark:text-slate-100">📚 분야 정보 수정</h2>
             <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1">분야 ID (변경 불가)</label>
-              <input type="text" value={editingCategory.id} disabled className="w-full p-2.5 bg-slate-100 border border-slate-200 rounded-lg font-mono text-sm text-slate-400 uppercase" />
+              <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 mb-1">분야 ID (변경 불가)</label>
+              <input type="text" value={editingCategory.id} disabled className="w-full p-2.5 bg-slate-100 border border-slate-200 rounded-lg font-mono text-sm text-slate-400 uppercase dark:bg-slate-900 dark:border-slate-700 dark:text-slate-500" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">새 분야 이름</label>
+              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">새 분야 이름</label>
               <input
                 type="text"
                 value={editingCategory.name}
                 onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
-                className="w-full p-3 border border-slate-300 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">분야별 출제 가이드 <span className="font-normal text-slate-400">(선택)</span></label>
+              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">분야별 출제 가이드 <span className="font-normal text-slate-400 dark:text-slate-500">(선택)</span></label>
               <textarea
                 value={editingCategory.prompt || ''}
                 onChange={(e) => setEditingCategory({ ...editingCategory, prompt: e.target.value })}
                 rows={4}
                 placeholder={'이 분야에 특화된 출제 지시를 적어주세요.\n예: 최신 LTS 기준, 컬렉션·제네릭·스트림 위주. 너무 지엽적인 문법은 제외.'}
-                className="w-full p-3 border border-slate-300 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <p className="text-xs text-slate-400 mt-1">마스터 프롬프트의 <code className="bg-slate-100 px-1 rounded font-mono">{'{{category_guide}}'}</code> 자리에 삽입됩니다. 비워두면 마스터만 사용.</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">마스터 프롬프트의 <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded font-mono">{'{{category_guide}}'}</code> 자리에 삽입됩니다. 비워두면 마스터만 사용.</p>
             </div>
             <div className="flex gap-2 pt-2">
               <button onClick={handleSaveEdit} className="flex-1 p-3 bg-blue-600 text-white font-bold rounded-xl text-sm hover:bg-blue-700">변경 저장</button>
-              <button onClick={() => setEditingCategory(null)} className="flex-1 p-3 bg-slate-100 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-200">취소</button>
+              <button onClick={() => setEditingCategory(null)} className="flex-1 p-3 bg-slate-100 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600">취소</button>
             </div>
           </div>
         )}

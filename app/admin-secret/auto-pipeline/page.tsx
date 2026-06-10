@@ -39,39 +39,39 @@ export default function AutoPipelinePage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
+    <main className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <div className="max-w-2xl mx-auto space-y-6">
         <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black text-slate-800">AI 완전 자동화 파이프라인</h1>
-            <p className="text-slate-500 mt-1">AI가 문제를 출제하고 자가 검증하여 즉시 서비스에 배포합니다.</p>
+            <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100">AI 완전 자동화 파이프라인</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">AI가 문제를 출제하고 자가 검증하여 즉시 서비스에 배포합니다.</p>
           </div>
-          <Link href={adminPath} className="text-sm font-bold text-blue-600 hover:underline">
+          <Link href={adminPath} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">
             ← 관리자 메인으로
           </Link>
         </header>
 
-        <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <section className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
           <form onSubmit={handleRunPipeline} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">분야 (Category)</label>
-                <select name="category" className="w-full p-3 border border-slate-300 rounded-lg text-slate-800" required>
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">분야 (Category)</label>
+                <select name="category" className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-slate-800" required>
                   {categories.length === 0 && <option value="">분야를 불러오는 중...</option>}
                   {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">자동 생성 개수</label>
-                <select name="count" className="w-full p-3 border border-slate-300 rounded-lg text-slate-800">
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">자동 생성 개수</label>
+                <select name="count" className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-slate-800">
                   <option value="5">5 문항</option>
                   <option value="10">10 문항</option>
                   <option value="20">20 문항 (대량)</option>
                 </select>
               </div>
             </div>
-            <div className="pt-4 border-t border-slate-100">
-              <button type="submit" disabled={isLoading || categories.length === 0} className="w-full p-4 font-black text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:bg-slate-300 transition-colors">
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
+              <button type="submit" disabled={isLoading || categories.length === 0} className="w-full p-4 font-black text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-600 transition-colors">
                 {isLoading ? '🤖 출제 및 검증 중...' : '🚀 파이프라인 가동'}
               </button>
             </div>
@@ -79,7 +79,7 @@ export default function AutoPipelinePage() {
         </section>
 
         {resultMsg && (
-          <div className={`p-4 rounded-xl font-bold ${resultMsg.startsWith('✅') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          <div className={`p-4 rounded-xl font-bold ${resultMsg.startsWith('✅') ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'}`}>
             {resultMsg}
           </div>
         )}

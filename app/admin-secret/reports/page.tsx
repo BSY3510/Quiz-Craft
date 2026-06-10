@@ -110,20 +110,20 @@ export default function AdminReportsPage() {
   const onFilterCategory = (v: string) => { setFilterCategory(v); setCurrentPage(1) }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
+    <main className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <div className="max-w-5xl mx-auto space-y-6">
         <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black text-slate-800">신고 및 정정 요청 관리</h1>
-            <p className="text-slate-500 mt-1">사용자가 접수한 문제의 오류를 확인하고 수정합니다.</p>
+            <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100">신고 및 정정 요청 관리</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">사용자가 접수한 문제의 오류를 확인하고 수정합니다.</p>
           </div>
-          <Link href={adminPath} className="text-sm font-bold text-blue-600 hover:underline">← 관리자 메인</Link>
+          <Link href={adminPath} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">← 관리자 메인</Link>
         </header>
 
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex gap-4">
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex gap-4">
           <div className="flex-1">
-            <label className="block text-xs font-bold text-slate-500 mb-1">처리 상태 필터</label>
-            <select value={filterStatus} onChange={(e) => onFilterStatus(e.target.value)} className="w-full p-2 border rounded-lg text-sm">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">처리 상태 필터</label>
+            <select value={filterStatus} onChange={(e) => onFilterStatus(e.target.value)} className="w-full p-2 border rounded-lg text-sm dark:border-slate-600 dark:bg-slate-700">
               <option value="all">전체 상태</option>
               <option value="pending">대기 중</option>
               <option value="resolved">해결됨</option>
@@ -131,46 +131,46 @@ export default function AdminReportsPage() {
             </select>
           </div>
           <div className="flex-1">
-            <label className="block text-xs font-bold text-slate-500 mb-1">분야 필터</label>
-            <select value={filterCategory} onChange={(e) => onFilterCategory(e.target.value)} className="w-full p-2 border rounded-lg text-sm">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">분야 필터</label>
+            <select value={filterCategory} onChange={(e) => onFilterCategory(e.target.value)} className="w-full p-2 border rounded-lg text-sm dark:border-slate-600 dark:bg-slate-700">
               <option value="all">전체 분야</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
           {isLoading ? (
-            <div className="p-8 text-center text-slate-500 font-bold">신고 내역을 불러오는 중...</div>
+            <div className="p-8 text-center text-slate-500 dark:text-slate-400 font-bold">신고 내역을 불러오는 중...</div>
           ) : paginatedReports.length === 0 ? (
-            <div className="p-12 text-center text-slate-500">조건에 일치하는 내역이 없습니다.</div>
+            <div className="p-12 text-center text-slate-500 dark:text-slate-400">조건에 일치하는 내역이 없습니다.</div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-700">
               {paginatedReports.map((report) => (
-                <div key={report.id} className="p-6 hover:bg-slate-50 transition-colors">
+                <div key={report.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
                       <Badge tone={statusTone(report.status)} className="px-3 py-1 rounded-lg">{report.status}</Badge>
-                      <span className="text-sm font-bold text-slate-400">{new Date(report.created_at).toLocaleString()}</span>
+                      <span className="text-sm font-bold text-slate-400 dark:text-slate-500">{new Date(report.created_at).toLocaleString()}</span>
                     </div>
                     {report.status === 'pending' && (
                       <div className="flex gap-2">
-                        <button onClick={() => handleUpdateStatus(report.id, 'resolved')} className="px-3 py-1 bg-green-50 text-green-700 font-bold text-sm rounded border border-green-200">✓ 해결</button>
-                        <button onClick={() => handleUpdateStatus(report.id, 'dismissed')} className="px-3 py-1 bg-slate-100 text-slate-600 font-bold text-sm rounded border border-slate-200">✕ 반려</button>
+                        <button onClick={() => handleUpdateStatus(report.id, 'resolved')} className="px-3 py-1 bg-green-50 text-green-700 font-bold text-sm rounded border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/50">✓ 해결</button>
+                        <button onClick={() => handleUpdateStatus(report.id, 'dismissed')} className="px-3 py-1 bg-slate-100 text-slate-600 font-bold text-sm rounded border border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600">✕ 반려</button>
                       </div>
                     )}
                   </div>
-                  <div className="bg-red-50 p-4 rounded-xl border border-red-100 mb-4">
-                    <p className="text-sm font-black text-red-800 mb-1">🚨 신고 사유</p>
-                    <p className="text-slate-800 font-medium">{report.reason}</p>
+                  <div className="bg-red-50 p-4 rounded-xl border border-red-100 mb-4 dark:bg-red-900/20 dark:border-red-900/50">
+                    <p className="text-sm font-black text-red-800 dark:text-red-300 mb-1">🚨 신고 사유</p>
+                    <p className="text-slate-800 dark:text-slate-100 font-medium">{report.reason}</p>
                   </div>
                   {report.questions && (
-                    <div className="bg-slate-100 p-4 rounded-xl border border-slate-200">
+                    <div className="bg-slate-100 p-4 rounded-xl border border-slate-200 dark:bg-slate-900/50 dark:border-slate-700">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-bold text-slate-500 uppercase">분야: {report.questions.category_id}</span>
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">분야: {report.questions.category_id}</span>
                         <button onClick={() => report.questions && handleOpenEdit(report.questions.id)} className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded">✏️ 문제 수정</button>
                       </div>
-                      <p className="font-bold text-slate-800">{report.questions.question_text}</p>
+                      <p className="font-bold text-slate-800 dark:text-slate-100">{report.questions.question_text}</p>
                     </div>
                   )}
                 </div>
@@ -187,31 +187,31 @@ export default function AdminReportsPage() {
       <Modal open={!!editingQuestion} onClose={() => setEditingQuestion(null)} className="max-w-2xl" labelledBy="rep-edit-title">
         {editingQuestion && (
           <div className="space-y-5">
-            <h2 id="rep-edit-title" className="text-xl font-black text-slate-800">문제 수정</h2>
+            <h2 id="rep-edit-title" className="text-xl font-black text-slate-800 dark:text-slate-100">문제 수정</h2>
             <div>
-              <textarea value={editingQuestion.question_text} onChange={(e) => setEditingQuestion({...editingQuestion, question_text: e.target.value})} className="w-full p-3 border rounded-lg text-slate-800" rows={2}/>
+              <textarea value={editingQuestion.question_text} onChange={(e) => setEditingQuestion({...editingQuestion, question_text: e.target.value})} className="w-full p-3 border rounded-lg text-slate-800 dark:border-slate-600 dark:bg-slate-700" rows={2}/>
             </div>
             <div className="grid grid-cols-2 gap-4">
               {editingQuestion.options.map((opt, idx) => (
                 <div key={opt.id}>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">보기 {opt.id}</label>
-                  <input value={opt.text} onChange={(e) => { const newOptions = [...editingQuestion.options]; newOptions[idx].text = e.target.value; setEditingQuestion({...editingQuestion, options: newOptions}) }} className="w-full p-3 border rounded-lg text-slate-800 text-sm"/>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">보기 {opt.id}</label>
+                  <input value={opt.text} onChange={(e) => { const newOptions = [...editingQuestion.options]; newOptions[idx].text = e.target.value; setEditingQuestion({...editingQuestion, options: newOptions}) }} className="w-full p-3 border rounded-lg text-slate-800 text-sm dark:border-slate-600 dark:bg-slate-700"/>
                 </div>
               ))}
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">정답 ID</label>
-              <select value={editingQuestion.answer_id} onChange={(e) => setEditingQuestion({...editingQuestion, answer_id: e.target.value})} className="w-full p-3 border rounded-lg text-slate-800">
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">정답 ID</label>
+              <select value={editingQuestion.answer_id} onChange={(e) => setEditingQuestion({...editingQuestion, answer_id: e.target.value})} className="w-full p-3 border rounded-lg text-slate-800 dark:border-slate-600 dark:bg-slate-700">
                 {editingQuestion.options.map((opt) => <option key={opt.id} value={opt.id}>{opt.id}번</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">해설</label>
-              <textarea value={editingQuestion.explanation} onChange={(e) => setEditingQuestion({...editingQuestion, explanation: e.target.value})} className="w-full p-3 border rounded-lg text-slate-800" rows={3}/>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">해설</label>
+              <textarea value={editingQuestion.explanation} onChange={(e) => setEditingQuestion({...editingQuestion, explanation: e.target.value})} className="w-full p-3 border rounded-lg text-slate-800 dark:border-slate-600 dark:bg-slate-700" rows={3}/>
             </div>
-            <div className="flex gap-3 pt-4 border-t border-slate-100">
+            <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
               <button onClick={handleSaveEdit} className="flex-1 p-4 bg-blue-600 text-white font-black rounded-xl">저장하기</button>
-              <button onClick={() => setEditingQuestion(null)} className="flex-1 p-4 bg-slate-100 text-slate-700 font-bold rounded-xl">취소</button>
+              <button onClick={() => setEditingQuestion(null)} className="flex-1 p-4 bg-slate-100 text-slate-700 font-bold rounded-xl dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600">취소</button>
             </div>
           </div>
         )}

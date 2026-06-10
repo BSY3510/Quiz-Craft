@@ -97,41 +97,41 @@ export default function AdminDashboardStatsPage() {
   const onSortType = (v: string) => { setSortType(v); setCurrentPage(1) }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6 relative">
+    <main className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 relative">
       <div className="max-w-6xl mx-auto space-y-6">
         <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black text-slate-800">운영 대시보드 상세</h1>
-            <p className="text-slate-500 mt-1">학습 콘텐츠 상세 분석 및 서비스 설정</p>
+            <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100">운영 대시보드 상세</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">학습 콘텐츠 상세 분석 및 서비스 설정</p>
           </div>
-          <Link href={adminPath} className="text-sm font-bold text-blue-600 hover:underline">← 관리자 메인</Link>
+          <Link href={adminPath} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">← 관리자 메인</Link>
         </header>
 
         {/* 글로벌 설정 영역 */}
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold text-slate-800">구글 소셜 로그인 연동</h2>
-            <p className="text-xs text-slate-500">사용자의 구글 로그인 접근을 허용하거나 차단합니다.</p>
+            <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">구글 소셜 로그인 연동</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">사용자의 구글 로그인 접근을 허용하거나 차단합니다.</p>
           </div>
-          <button 
+          <button
             onClick={handleToggleGoogleLogin}
-            className={`px-4 py-2 font-bold rounded-lg transition-colors ${isGoogleEnabled ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}
+            className={`px-4 py-2 font-bold rounded-lg transition-colors ${isGoogleEnabled ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}
           >
             {isGoogleEnabled ? '활성화됨 (ON)' : '비활성화됨 (OFF)'}
           </button>
         </div>
 
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex gap-4">
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex gap-4">
           <div className="flex-1">
-            <label className="block text-xs font-bold text-slate-500 mb-1">분야 필터</label>
-            <select value={filterCategory} onChange={(e) => onFilterCategory(e.target.value)} className="w-full p-2 border rounded-lg text-sm text-slate-800">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">분야 필터</label>
+            <select value={filterCategory} onChange={(e) => onFilterCategory(e.target.value)} className="w-full p-2 border rounded-lg text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-700">
               <option value="all">전체 분야</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="flex-1">
-            <label className="block text-xs font-bold text-slate-500 mb-1">정렬 방식</label>
-            <select value={sortType} onChange={(e) => onSortType(e.target.value)} className="w-full p-2 border rounded-lg text-sm text-slate-800">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">정렬 방식</label>
+            <select value={sortType} onChange={(e) => onSortType(e.target.value)} className="w-full p-2 border rounded-lg text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-700">
               <option value="recent">최신 등록순</option>
               <option value="errorRate">🔥 오답률 높은 순</option>
               <option value="type">문제 종류순</option>
@@ -139,15 +139,15 @@ export default function AdminDashboardStatsPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
           {isLoading ? (
-            <div className="p-8 text-center text-slate-500">데이터 집계 중...</div>
+            <div className="p-8 text-center text-slate-500 dark:text-slate-400">데이터 집계 중...</div>
           ) : paginatedQuestions.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">조건에 부합하는 문제가 존재하지 않습니다.</div>
+            <div className="p-8 text-center text-slate-500 dark:text-slate-400">조건에 부합하는 문제가 존재하지 않습니다.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
+                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
                   <tr>
                     <th className="p-4">분야</th>
                     <th className="p-4 w-1/2">문제 내용 (클릭하여 전체 수정)</th>
@@ -155,15 +155,15 @@ export default function AdminDashboardStatsPage() {
                     <th className="p-4">상태</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-800">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-800 dark:text-slate-200">
                   {/* ✅ paginatedQuestions를 순회 출력 */}
                   {paginatedQuestions.map(q => (
-                    <tr key={q.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => setEditingQuestion({...q})}>
-                      <td className="p-4 font-bold text-blue-600 uppercase">{q.category_id}</td>
+                    <tr key={q.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer" onClick={() => setEditingQuestion({...q})}>
+                      <td className="p-4 font-bold text-blue-600 dark:text-blue-400 uppercase">{q.category_id}</td>
                       <td className="p-4">{q.question_text} ✏️</td>
                       <td className="p-4">
-                        <span className={`font-bold ${q.errorRate > 50 ? 'text-red-500' : 'text-slate-600'}`}>{q.errorRate.toFixed(1)}%</span>
-                        <span className="text-xs text-slate-400 block">총 {q.totalAttempts}회 풀이</span>
+                        <span className={`font-bold ${q.errorRate > 50 ? 'text-red-500 dark:text-red-400' : 'text-slate-600 dark:text-slate-300'}`}>{q.errorRate.toFixed(1)}%</span>
+                        <span className="text-xs text-slate-400 dark:text-slate-500 block">총 {q.totalAttempts}회 풀이</span>
                       </td>
                       <td className="p-4">
                         <Badge tone={statusTone(q.status)}>{q.status}</Badge>
@@ -184,32 +184,32 @@ export default function AdminDashboardStatsPage() {
       <Modal open={!!editingQuestion} onClose={() => setEditingQuestion(null)} className="max-w-2xl" labelledBy="q-edit-title">
         {editingQuestion && (
           <div className="space-y-4">
-            <h2 id="q-edit-title" className="text-xl font-bold text-slate-800">문제 수정</h2>
+            <h2 id="q-edit-title" className="text-xl font-bold text-slate-800 dark:text-slate-100">문제 수정</h2>
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">질문 내용</label>
-              <textarea value={editingQuestion.question_text} onChange={(e) => setEditingQuestion({...editingQuestion, question_text: e.target.value})} className="w-full p-3 border border-slate-300 rounded-lg text-slate-800" rows={2} />
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">질문 내용</label>
+              <textarea value={editingQuestion.question_text} onChange={(e) => setEditingQuestion({...editingQuestion, question_text: e.target.value})} className="w-full p-3 border border-slate-300 rounded-lg text-slate-800 dark:border-slate-600 dark:bg-slate-700" rows={2} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               {editingQuestion.options.map((opt, idx) => (
                 <div key={opt.id}>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">보기 {opt.id}</label>
-                  <input value={opt.text} onChange={(e) => { const newOptions = [...editingQuestion.options]; newOptions[idx].text = e.target.value; setEditingQuestion({...editingQuestion, options: newOptions}) }} className="w-full p-2 border border-slate-300 rounded-lg text-slate-800 text-sm" />
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">보기 {opt.id}</label>
+                  <input value={opt.text} onChange={(e) => { const newOptions = [...editingQuestion.options]; newOptions[idx].text = e.target.value; setEditingQuestion({...editingQuestion, options: newOptions}) }} className="w-full p-2 border border-slate-300 rounded-lg text-slate-800 text-sm dark:border-slate-600 dark:bg-slate-700" />
                 </div>
               ))}
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">정답 ID (1~4)</label>
-              <select value={editingQuestion.answer_id} onChange={(e) => setEditingQuestion({...editingQuestion, answer_id: e.target.value})} className="w-full p-3 border border-slate-300 rounded-lg text-slate-800">
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">정답 ID (1~4)</label>
+              <select value={editingQuestion.answer_id} onChange={(e) => setEditingQuestion({...editingQuestion, answer_id: e.target.value})} className="w-full p-3 border border-slate-300 rounded-lg text-slate-800 dark:border-slate-600 dark:bg-slate-700">
                 {editingQuestion.options.map((opt) => <option key={opt.id} value={opt.id}>{opt.id}번 보기</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">해설</label>
-              <textarea value={editingQuestion.explanation} onChange={(e) => setEditingQuestion({...editingQuestion, explanation: e.target.value})} className="w-full p-3 border border-slate-300 rounded-lg text-slate-800" rows={3} />
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">해설</label>
+              <textarea value={editingQuestion.explanation} onChange={(e) => setEditingQuestion({...editingQuestion, explanation: e.target.value})} className="w-full p-3 border border-slate-300 rounded-lg text-slate-800 dark:border-slate-600 dark:bg-slate-700" rows={3} />
             </div>
             <div className="flex gap-3 pt-4">
               <button onClick={handleSaveEdit} className="flex-1 p-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">저장하기</button>
-              <button onClick={() => setEditingQuestion(null)} className="flex-1 p-3 bg-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-300">취소</button>
+              <button onClick={() => setEditingQuestion(null)} className="flex-1 p-3 bg-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600">취소</button>
             </div>
           </div>
         )}
