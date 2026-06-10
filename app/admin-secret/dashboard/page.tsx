@@ -32,12 +32,14 @@ export default function AdminDashboardStatsPage() {
       const { data: cats } = await supabase.from('categories').select('id, name')
       if (cats) setCategories(cats)
 
-      const { data: qData } = await supabase.from('questions').select('*, attempts(is_correct)')
-      
+      // ✅ 정답(answer_id)/해설은 일반 권한에서 회수되므로 관리자 정의자 함수로 조회.
+      //    함수가 문제 + 풀이 통계(total/correct)를 함께 반환한다.
+      const { data: qData } = await supabase.rpc('get_questions_admin')
+
       if (qData) {
-        const enrichedQuestions = qData.map(q => {
-          const totalAttempts = q.attempts?.length || 0
-          const correctAttempts = q.attempts?.filter((a: any) => a.is_correct).length || 0
+        const enrichedQuestions = qData.map((q: any) => {
+          const totalAttempts = Number(q.total_attempts) || 0
+          const correctAttempts = Number(q.correct_attempts) || 0
           const errorRate = totalAttempts === 0 ? 0 : ((totalAttempts - correctAttempts) / totalAttempts) * 100
           return { ...q, errorRate, totalAttempts }
         })

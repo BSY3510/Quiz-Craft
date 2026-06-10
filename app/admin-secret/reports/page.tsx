@@ -27,9 +27,11 @@ export default function AdminReportsPage() {
       const { data: cats } = await supabase.from('categories').select('id, name')
       if (cats) setCategories(cats)
 
+      // ✅ 정답(answer_id)/해설은 일반 권한에서 회수되므로 목록 임베드에서 제외.
+      //    "문제 수정" 클릭 시 get_question_admin 정의자 함수로 정답 포함 단건 조회.
       const { data: reps } = await supabase
         .from('reports')
-        .select(`id, reason, status, created_at, questions(id, category_id, question_text, code_snippet, options, answer_id, explanation)`)
+        .select(`id, reason, status, created_at, questions(id, category_id, question_text, code_snippet, options)`)
         .order('created_at', { ascending: false })
 
       if (reps) setReports(reps)
@@ -44,6 +46,17 @@ export default function AdminReportsPage() {
       setReports(reports.map(r => r.id === reportId ? { ...r, status: newStatus } : r))
       alert(`상태가 '${newStatus === 'resolved' ? '수정 완료' : '반려'}'로 변경되었습니다.`)
     }
+  }
+
+  // ✅ 정답/해설 포함 단건을 정의자 함수로 가져와 수정 모달을 연다.
+  const handleOpenEdit = async (questionId: string) => {
+    const { data, error } = await supabase.rpc('get_question_admin', { p_id: questionId })
+    const full = Array.isArray(data) ? data[0] : data
+    if (error || !full) {
+      alert('문제 정보를 불러오지 못했습니다.')
+      return
+    }
+    setEditingQuestion(full)
   }
 
   const handleSaveEdit = async () => {
@@ -132,7 +145,7 @@ export default function AdminReportsPage() {
                     <div className="bg-slate-100 p-4 rounded-xl border border-slate-200">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-xs font-bold text-slate-500 uppercase">분야: {report.questions.category_id}</span>
-                        <button onClick={() => setEditingQuestion({...report.questions})} className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded">✏️ 문제 수정</button>
+                        <button onClick={() => handleOpenEdit(report.questions.id)} className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded">✏️ 문제 수정</button>
                       </div>
                       <p className="font-bold text-slate-800">{report.questions.question_text}</p>
                     </div>
