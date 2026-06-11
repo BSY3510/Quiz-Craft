@@ -40,6 +40,12 @@ export async function signup(_prevState: AuthState, formData: FormData): Promise
     return { error: `비밀번호는 ${MIN_PASSWORD_LENGTH}자 이상이어야 합니다.` }
   }
 
+  // 비밀번호 확인 일치 검증 (클라이언트 우회 방지를 위해 서버에서도 재검증)
+  const confirm = formData.get('confirm') as string
+  if (password !== confirm) {
+    return { error: '비밀번호가 일치하지 않습니다.' }
+  }
+
   const marketingOptIn = formData.get('agree_marketing') === 'on'
 
   const { data, error } = await supabase.auth.signUp({
