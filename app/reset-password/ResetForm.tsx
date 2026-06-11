@@ -19,7 +19,7 @@ export default function ResetForm() {
         <input type="hidden" name="email" value={email} />
         <p className="text-sm text-slate-500 dark:text-slate-400 text-center">
           <b className="text-slate-700 dark:text-slate-200">{email || '입력하신 주소'}</b>로 보내드린
-          6자리 인증 코드를 입력해 주세요.
+          인증 코드를 입력해 주세요.
         </p>
         <div>
           <label className="sr-only" htmlFor="token">인증 코드</label>
@@ -29,10 +29,10 @@ export default function ResetForm() {
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
-            maxLength={6}
-            placeholder="6자리 코드"
+            maxLength={10}
+            placeholder="인증 코드"
             required
-            className="w-full p-4 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-center text-lg tracking-[0.5em] font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-700 transition-all text-slate-800"
+            className="w-full p-4 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-center text-lg tracking-[0.4em] font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-700 transition-all text-slate-800"
           />
         </div>
 
