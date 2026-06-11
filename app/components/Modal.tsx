@@ -19,6 +19,13 @@ interface ModalProps {
 export function Modal({ open, onClose, children, className = 'max-w-md', labelledBy }: ModalProps) {
   const boxRef = useRef<HTMLDivElement>(null)
 
+  // 최신 onClose를 ref로 보관 — 아래 열림 effect가 onClose 변경 때마다 재실행되어
+  // (인라인 함수 prop의 경우) 입력 중 포커스를 빼앗는 문제를 막는다.
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
+
   useEffect(() => {
     if (!open) return
 
@@ -29,13 +36,13 @@ export function Modal({ open, onClose, children, className = 'max-w-md', labelle
     // 직전 포커스 저장(닫을 때 복원)
     const prevActive = document.activeElement as HTMLElement | null
 
-    // 모달 안으로 포커스 이동
+    // 모달 안으로 포커스 이동 (열릴 때 1회)
     boxRef.current?.focus()
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault()
-        onClose()
+        onCloseRef.current()
         return
       }
       if (e.key === 'Tab' && boxRef.current) {
@@ -59,7 +66,7 @@ export function Modal({ open, onClose, children, className = 'max-w-md', labelle
       document.removeEventListener('keydown', onKeyDown)
       prevActive?.focus?.()
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 
