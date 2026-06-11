@@ -77,6 +77,7 @@ export interface Report {
 export interface SiteSettings {
   id: number
   google_login_enabled: boolean
+  auto_approve_signup: boolean
   system_prompt: string | null
   gemini_model: string
 }

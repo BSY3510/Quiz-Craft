@@ -1,11 +1,13 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
+import Link from 'next/link'
 import { login, signup } from './actions'
 
 export default function LoginForm({ isGoogleEnabled }: { isGoogleEnabled: boolean }) {
   const [loginState, loginAction, loginPending] = useActionState(login, null)
   const [signupState, signupAction, signupPending] = useActionState(signup, null)
+  const [agreed, setAgreed] = useState(false)
 
   const errorMsg = loginState?.error || signupState?.error
   const pending = loginPending || signupPending
@@ -48,6 +50,41 @@ export default function LoginForm({ isGoogleEnabled }: { isGoogleEnabled: boolea
           <input id="password" name="password" type="password" placeholder="비밀번호" required className="w-full p-4 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-700 transition-all text-slate-800" />
         </div>
 
+        {/* 비밀번호 재설정 안내 */}
+        <div className="flex justify-end">
+          <Link href="/reset-password" className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 underline">
+            비밀번호를 잊으셨나요?
+          </Link>
+        </div>
+
+        {/* 가입 약관 동의 (가입 시 필수). 로그인에는 영향을 주지 않는다. */}
+        <div className="space-y-2 pt-1">
+          <label className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+            <input
+              type="checkbox"
+              name="agree_terms"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span>
+              <span className="font-bold text-red-500">[필수]</span>{' '}
+              <Link href="/terms" target="_blank" className="underline hover:text-slate-900 dark:hover:text-white">이용약관</Link> 및{' '}
+              <Link href="/privacy" target="_blank" className="underline hover:text-slate-900 dark:hover:text-white">개인정보 수집·이용</Link>에 동의합니다. (만 14세 이상)
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+            <input
+              type="checkbox"
+              name="agree_marketing"
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span>
+              <span className="font-medium text-slate-400">[선택]</span> 이벤트·혜택 등 마케팅 정보 수신에 동의합니다.
+            </span>
+          </label>
+        </div>
+
         {/* ✅ 로그인/가입 실패 메시지 표시 (BUG-2) */}
         {errorMsg && (
           <p role="alert" className="text-sm font-medium text-red-600 dark:text-red-400 text-center bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-900 rounded-lg p-3">
@@ -59,7 +96,7 @@ export default function LoginForm({ isGoogleEnabled }: { isGoogleEnabled: boolea
           <button formAction={loginAction} disabled={pending} className="flex-1 p-4 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-700 dark:hover:bg-slate-600">
             {loginPending ? '로그인 중...' : '로그인'}
           </button>
-          <button formAction={signupAction} disabled={pending} className="flex-1 p-4 bg-white text-slate-700 font-bold rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-600">
+          <button formAction={signupAction} disabled={pending || !agreed} title={!agreed ? '약관 동의 후 가입할 수 있습니다.' : undefined} className="flex-1 p-4 bg-white text-slate-700 font-bold rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-600">
             {signupPending ? '가입 중...' : '가입하기'}
           </button>
         </div>

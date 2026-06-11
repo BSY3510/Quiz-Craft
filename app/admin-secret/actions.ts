@@ -162,6 +162,22 @@ export async function setGoogleLogin(enabled: boolean) {
   return { success: true }
 }
 
+// 4-0. 가입 자동 승인 토글 (site_settings) — ON이면 신규 가입자가 status='approved'로 생성됨
+//      (DB 트리거 handle_new_user가 이 값을 읽어 status를 결정). 이메일 인증 단계는 그대로 유지.
+export async function setAutoApproveSignup(enabled: boolean) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('site_settings')
+    .update({ auto_approve_signup: enabled })
+    .eq('id', 1)
+
+  if (error) return { error: '설정 변경 중 오류가 발생했습니다.' }
+  return { success: true }
+}
+
 // 4-1. 자동 출제(cron) 활성화 토글 (site_settings)
 export async function setAutoGenerate(enabled: boolean) {
   const c = await checkAdmin()

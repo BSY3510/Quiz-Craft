@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
-import { setGoogleLogin, setGeminiModel, setAutoGenerate, setAutoGenerateConfig } from '../actions'
+import { setGoogleLogin, setGeminiModel, setAutoGenerate, setAutoGenerateConfig, setAutoApproveSignup } from '../actions'
 import { useToast } from '@/app/components/Toast'
 
 interface Category { id: string; name: string }
@@ -25,6 +25,7 @@ export default function AdminSettingsPage() {
   const toast = useToast()
 
   const [isGoogleEnabled, setIsGoogleEnabled] = useState(false)
+  const [isAutoApproveEnabled, setIsAutoApproveEnabled] = useState(false)
   const [isAutoGenEnabled, setIsAutoGenEnabled] = useState(false)
   const [model, setModel] = useState('gemini-3.1-flash-lite')
   const [isSavingModel, setIsSavingModel] = useState(false)
@@ -43,13 +44,14 @@ export default function AdminSettingsPage() {
       const [{ data }, { data: cats }] = await Promise.all([
         supabase
           .from('site_settings')
-          .select('google_login_enabled, gemini_model, auto_generate_enabled, auto_generate_mode, auto_generate_category_ids, auto_generate_count, auto_generate_ox_ratio')
+          .select('google_login_enabled, auto_approve_signup, gemini_model, auto_generate_enabled, auto_generate_mode, auto_generate_category_ids, auto_generate_count, auto_generate_ox_ratio')
           .eq('id', 1)
           .single(),
         supabase.from('categories').select('id, name').eq('active', true).order('created_at'),
       ])
       if (data) {
         setIsGoogleEnabled(data.google_login_enabled)
+        setIsAutoApproveEnabled(data.auto_approve_signup ?? false)
         setIsAutoGenEnabled(data.auto_generate_enabled ?? false)
         if (data.gemini_model) setModel(data.gemini_model)
         setAutoGenMode(data.auto_generate_mode === 'selected' ? 'selected' : 'rotation')
@@ -113,6 +115,14 @@ export default function AdminSettingsPage() {
     toast.success(`구글 로그인이 ${newValue ? '활성화' : '비활성화'} 되었습니다.`)
   }
 
+  const handleToggleAutoApprove = async () => {
+    const newValue = !isAutoApproveEnabled
+    const res = await setAutoApproveSignup(newValue)
+    if (res.error) return toast.error(res.error)
+    setIsAutoApproveEnabled(newValue)
+    toast.success(`가입 자동 승인이 ${newValue ? '활성화' : '비활성화'} 되었습니다.`)
+  }
+
   const handleToggleAutoGen = async () => {
     const newValue = !isAutoGenEnabled
     const res = await setAutoGenerate(newValue)
@@ -152,6 +162,20 @@ export default function AdminSettingsPage() {
             className={`px-4 py-2 font-bold rounded-lg transition-colors disabled:opacity-50 ${isGoogleEnabled ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}
           >
             {isLoading ? '...' : isGoogleEnabled ? '활성화됨 (ON)' : '비활성화됨 (OFF)'}
+          </button>
+        </section>
+
+        <section className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">가입 자동 승인</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">활성화 시 신규 가입자가 관리자 승인 없이 바로 이용할 수 있습니다(이메일 인증은 그대로 필요). 비공개 베타라면 꺼두세요.</p>
+          </div>
+          <button
+            onClick={handleToggleAutoApprove}
+            disabled={isLoading}
+            className={`px-4 py-2 font-bold rounded-lg transition-colors disabled:opacity-50 shrink-0 ${isAutoApproveEnabled ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}
+          >
+            {isLoading ? '...' : isAutoApproveEnabled ? '활성화됨 (ON)' : '비활성화됨 (OFF)'}
           </button>
         </section>
 
