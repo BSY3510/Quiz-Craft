@@ -94,6 +94,15 @@ export default function AdminQuizGenerator() {
                 <option value="5">5 문항</option>
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">난이도</label>
+              <select name="difficulty" defaultValue="auto" className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-slate-800">
+                <option value="auto">자동 (AI 자연 분포)</option>
+                <option value="easy">쉬움으로 지정</option>
+                <option value="medium">보통으로 지정</option>
+                <option value="hard">어려움으로 지정</option>
+              </select>
+            </div>
           </div>
           <button type="submit" disabled={isLoading || categories.length === 0}
             className="w-full p-4 font-black text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-wait transition-colors"

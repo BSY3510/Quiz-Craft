@@ -15,6 +15,8 @@ import {
   VALIDATION_RESPONSE_SCHEMA,
   type NormalizedQuestion,
   type GenQuestionType,
+  type Difficulty,
+  type DifficultyRatio,
 } from '../questionSchema'
 
 export interface PipelineResult {
@@ -33,7 +35,9 @@ export async function generateForCategory(
   supabase: SupabaseClient,
   categoryId: string,
   count: number,
-  type: GenQuestionType = 'multiple-choice'
+  type: GenQuestionType = 'multiple-choice',
+  // 난이도 옵션 — fixed: 전부 지정 난이도로 강제(저장값도 확정), ratio: 비율 분포 유도. 없으면 자연 분포.
+  difficultyOpts?: { fixed?: Difficulty; ratio?: DifficultyRatio }
 ): Promise<PipelineResult> {
   const { data: settings } = await supabase
     .from('site_settings')
@@ -69,7 +73,7 @@ export async function generateForCategory(
     }) + buildTypeNote(type, {
       multipleChoice: settings.prompt_multiple_choice,
       trueFalse: settings.prompt_true_false,
-    }) + buildDifficultyNote() + buildAvoidanceNote(existingTexts)
+    }) + buildDifficultyNote(difficultyOpts) + buildAvoidanceNote(existingTexts)
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
   const modelName = settings.gemini_model || process.env.GEMINI_MODEL_VERSION || 'gemini-3.1-flash-lite'
@@ -104,6 +108,8 @@ export async function generateForCategory(
     return { ok: false, error: `생성 결과 검증 실패(재시도 초과): ${lastErr}` }
   }
   coerceType(questions, type) // OX 요청이면 type 확정
+  // 난이도 지정(fixed) 출제면 저장 난이도를 지정값으로 확정(강제)
+  if (difficultyOpts?.fixed) questions.forEach((q) => { q.difficulty = difficultyOpts.fixed! })
 
   // 중복 방지(2): 기존 문제 및 배치 내부와 근접 중복인 항목 제거
   const deduped = filterNearDuplicates(questions, existingTexts)

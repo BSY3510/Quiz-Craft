@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { checkAdmin } from '@/utils/auth'
-import { buildPrompt, buildTypeNote, buildDifficultyNote, coerceType, normalizeList, normalizeAndValidate, parseJsonLoose, QUESTION_RESPONSE_SCHEMA } from './questionSchema'
+import { buildPrompt, buildTypeNote, buildDifficultyNote, coerceType, normalizeList, normalizeAndValidate, parseJsonLoose, normalizeDifficultyRatio, QUESTION_RESPONSE_SCHEMA, type Difficulty } from './questionSchema'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { revalidatePath } from 'next/cache'
 
@@ -15,6 +15,10 @@ export async function generateQuizDraft(formData: FormData) {
   const categoryId = formData.get('category') as string
   const count = parseInt(formData.get('count') as string, 10) || 3
   const type = (formData.get('type') as string) === 'true-false' ? 'true-false' : 'multiple-choice'
+  // 난이도 지정(easy/medium/hard) 또는 'auto'(자연 분포). 지정 시 저장값을 그 값으로 확정.
+  const rawDifficulty = formData.get('difficulty') as string
+  const fixedDifficulty: Difficulty | undefined =
+    rawDifficulty === 'easy' || rawDifficulty === 'medium' || rawDifficulty === 'hard' ? rawDifficulty : undefined
 
   try {
     // ✅ DB에서 저장된 공통/유형별 프롬프트 + 모델 불러오기
@@ -43,7 +47,7 @@ export async function generateQuizDraft(formData: FormData) {
     }) + buildTypeNote(type, {
       multipleChoice: settings.prompt_multiple_choice,
       trueFalse: settings.prompt_true_false,
-    }) + buildDifficultyNote()
+    }) + buildDifficultyNote(fixedDifficulty ? { fixed: fixedDifficulty } : undefined)
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
     const modelName = settings.gemini_model || process.env.GEMINI_MODEL_VERSION || 'gemini-3.1-flash-lite'
@@ -69,6 +73,9 @@ export async function generateQuizDraft(formData: FormData) {
       }
     }
     if (parseErr) throw parseErr
+
+    // 난이도 지정 출제면 검수 초안의 난이도를 지정값으로 확정(검수 화면에서 추가 수정 가능)
+    if (fixedDifficulty) generatedQuestions.forEach((q) => { q.difficulty = fixedDifficulty })
 
     // 선택한 분야를 함께 반환해 저장 시 일괄 적용
     return { success: true, data: generatedQuestions, category: categoryId }
@@ -203,6 +210,7 @@ export async function setAutoGenerateConfig(opts: {
   categoryIds: string[]
   count: number
   oxRatio: number
+  difficultyRatio?: { easy: number; medium: number; hard: number }
 }) {
   const c = await checkAdmin()
   if (!c.ok) return { error: c.error }
@@ -210,6 +218,8 @@ export async function setAutoGenerateConfig(opts: {
   const mode = opts.mode === 'selected' ? 'selected' : 'rotation'
   const count = Math.min(20, Math.max(1, Math.floor(Number(opts.count)) || 5))
   const oxRatio = Math.min(100, Math.max(0, Math.floor(Number(opts.oxRatio)) || 0))
+  // 난이도 비율은 합 100으로 정규화(잔여분 medium). 미지정이면 기본 분포로.
+  const difficultyRatio = normalizeDifficultyRatio(opts.difficultyRatio ?? { easy: 30, medium: 50, hard: 20 })
   const categoryIds = Array.isArray(opts.categoryIds)
     ? opts.categoryIds.filter((x) => typeof x === 'string')
     : []
@@ -226,6 +236,7 @@ export async function setAutoGenerateConfig(opts: {
       auto_generate_category_ids: categoryIds,
       auto_generate_count: count,
       auto_generate_ox_ratio: oxRatio,
+      auto_generate_difficulty_ratio: difficultyRatio,
     })
     .eq('id', 1)
 

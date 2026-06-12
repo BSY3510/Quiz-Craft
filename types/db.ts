@@ -87,6 +87,8 @@ export interface SiteSettings {
   // 유형별 보조 프롬프트(공통 뒤에 덧붙임). null/빈값이면 객관식은 미적용, OX는 코드 기본값 사용.
   prompt_multiple_choice: string | null
   prompt_true_false: string | null
+  // 자동 출제(cron) 난이도 비율(합 100). 예: { easy: 30, medium: 50, hard: 20 }
+  auto_generate_difficulty_ratio: { easy: number; medium: number; hard: number }
   gemini_model: string
 }
 

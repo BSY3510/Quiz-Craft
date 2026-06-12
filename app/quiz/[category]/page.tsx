@@ -32,6 +32,15 @@ interface GradeResult {
 // 한 세션당 문항 수. 활성 문제가 이보다 적으면 있는 만큼만.
 const SESSION_SIZE = 10
 
+// 난이도 풀이 필터 (8-2). 'all'이면 전체에서 혼합.
+type DifficultyFilter = 'all' | 'easy' | 'medium' | 'hard'
+const DIFF_TABS: { key: DifficultyFilter; label: string }[] = [
+  { key: 'all', label: '전체' },
+  { key: 'easy', label: '쉬움' },
+  { key: 'medium', label: '보통' },
+  { key: 'hard', label: '어려움' },
+]
+
 // Fisher-Yates 셔플 (sort(()=>Math.random()-0.5)는 편향이 있어 사용 안 함)
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -52,6 +61,7 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
 
   const [pool, setPool] = useState<Question[]>([])        // 분야의 전체 활성 문제(세션 재시작용)
   const [questions, setQuestions] = useState<Question[]>([]) // 이번 세션 문항(최대 SESSION_SIZE)
+  const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('all') // 8-2 난이도 필터
   const [isLoading, setIsLoading] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
   // 세션 집계
@@ -87,9 +97,13 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
     fetchQuestions()
   }, [categoryId, supabase])
 
-  // 새 세션 시작 (전체 풀에서 다시 셔플 → SESSION_SIZE 만큼). 결과 화면에서 호출.
-  const handleRestart = () => {
-    setQuestions(shuffle(pool).slice(0, SESSION_SIZE))
+  // 현재(또는 지정) 난이도 필터로 풀에서 한 세션 분량을 뽑는다.
+  const sliceFor = (filter: DifficultyFilter) => {
+    const subset = filter === 'all' ? pool : pool.filter((q) => q.difficulty === filter)
+    return shuffle(subset).slice(0, SESSION_SIZE)
+  }
+
+  const resetSessionState = () => {
     setCurrentIndex(0)
     setCorrectCount(0)
     setSessionXp(0)
@@ -97,6 +111,39 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
     setIsSubmitted(false)
     setResult(null)
   }
+
+  // 새 세션 시작 (현재 난이도 필터 유지). 결과 화면에서 호출.
+  const handleRestart = () => {
+    setQuestions(sliceFor(difficultyFilter))
+    resetSessionState()
+  }
+
+  // 난이도 필터 변경 → 해당 난이도로 세션 재구성.
+  const applyDifficulty = (filter: DifficultyFilter) => {
+    if (filter === difficultyFilter) return
+    setDifficultyFilter(filter)
+    setQuestions(sliceFor(filter))
+    resetSessionState()
+  }
+
+  // 난이도 선택 토글 (풀이 화면 상단 공용)
+  const difficultyToggle = (
+    <div className="flex gap-1.5 mb-5">
+      {DIFF_TABS.map((t) => (
+        <button
+          key={t.key}
+          onClick={() => applyDifficulty(t.key)}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-colors ${
+            difficultyFilter === t.key
+              ? 'bg-blue-600 text-white border-blue-600'
+              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700'
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )
 
   if (isLoading) return (
     <main className="flex min-h-screen flex-col items-center bg-slate-50 dark:bg-slate-900 p-4 pt-8">
@@ -111,11 +158,29 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
       </div>
     </main>
   )
-  if (questions.length === 0) return (
+  if (pool.length === 0) return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
       <p className="text-slate-600 dark:text-slate-300 mb-4 font-bold">이 분야에는 아직 등록된 문제가 없습니다.</p>
       <button onClick={() => router.push('/quiz')} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold">대시보드로 돌아가기</button>
     </div>
+  )
+  // 풀은 있으나 선택한 난이도에 문제가 없는 경우 — 토글을 보여 다른 난이도로 전환 가능하게
+  if (questions.length === 0) return (
+    <main className="flex min-h-screen flex-col items-center bg-slate-50 dark:bg-slate-900 p-4 pt-8">
+      <div className="w-full max-w-md">
+        <div className="flex justify-between items-center mb-6">
+          <button onClick={() => router.push('/quiz')} className="text-sm font-bold text-slate-400 hover:text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:text-slate-100">
+            ← 그만 풀고 나가기
+          </button>
+          <span className="text-sm font-bold uppercase text-blue-600 dark:text-blue-400">{categoryId}</span>
+        </div>
+        {difficultyToggle}
+        <div className="p-8 text-center bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+          <p className="text-slate-600 dark:text-slate-300 font-bold">이 난이도의 문제가 없습니다.</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">다른 난이도를 선택해 보세요.</p>
+        </div>
+      </div>
+    </main>
   )
 
   const currentQuestion = questions[currentIndex]
@@ -124,9 +189,11 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
   if (isExhausted) {
     const total = questions.length
     const accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0
-    const hasMore = pool.length > SESSION_SIZE
+    const subsetCount = difficultyFilter === 'all' ? pool.length : pool.filter((q) => q.difficulty === difficultyFilter).length
+    const hasMore = subsetCount > SESSION_SIZE
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
+        <div className="w-full max-w-sm">{difficultyToggle}</div>
         <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 text-center">
           <span className="text-5xl">{accuracy >= 80 ? '🏆' : accuracy >= 50 ? '🎉' : '💪'}</span>
           <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mt-3 mb-1">세션 완료!</h2>
@@ -238,6 +305,9 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
             <span>현재 {currentIndex + 1}문제째 도전 중</span>
           </div>
         </div>
+
+        {/* 난이도 필터 토글 (8-2) */}
+        {difficultyToggle}
 
         {/* 진행률 바 */}
         <div className="mb-6">

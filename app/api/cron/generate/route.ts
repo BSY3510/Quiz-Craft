@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { generateForCategory } from '@/app/admin-secret/auto-pipeline/core'
+import { normalizeDifficultyRatio } from '@/app/admin-secret/questionSchema'
 
 // 매일 밤(KST 04:00) Vercel Cron 이 호출하는 자동 출제 엔드포인트.
 // 로그인 세션이 없으므로 service-role 클라이언트로 RLS 를 우회해 동작한다.
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
   // 3. 자동 출제 설정 확인 (활성화 여부 + 분야 선정 모드)
   const { data: cfg } = await supabase
     .from('site_settings')
-    .select('auto_generate_enabled, auto_generate_mode, auto_generate_category_ids, auto_generate_count, auto_generate_ox_ratio')
+    .select('auto_generate_enabled, auto_generate_mode, auto_generate_category_ids, auto_generate_count, auto_generate_ox_ratio, auto_generate_difficulty_ratio')
     .eq('id', 1)
     .single()
   if (cfg && cfg.auto_generate_enabled === false) {
@@ -48,6 +49,9 @@ export async function GET(request: NextRequest) {
   const batches: Array<{ type: 'multiple-choice' | 'true-false'; n: number }> = []
   if (mcCount > 0) batches.push({ type: 'multiple-choice', n: mcCount })
   if (oxCount > 0) batches.push({ type: 'true-false', n: oxCount })
+
+  // 난이도 비율(합 100 보정). 프롬프트 분포 지시로 주입(배치 쪼개기 X → 60초 한도 보호)
+  const difficultyRatio = normalizeDifficultyRatio(cfg?.auto_generate_difficulty_ratio)
 
   // 4. 활성 분야 조회 (선택 모드면 관리자가 지정한 분야로 제한)
   const { data: cats, error: catErr } = await supabase
@@ -84,7 +88,7 @@ export async function GET(request: NextRequest) {
   for (const t of targets) {
     for (const b of batches) {
       try {
-        const r = await generateForCategory(supabase, t.id, b.n, b.type)
+        const r = await generateForCategory(supabase, t.id, b.n, b.type, { ratio: difficultyRatio })
         results.push({ category: t.name, type: b.type, ok: r.ok, detail: r })
       } catch (e) {
         console.error(`Cron generate failed for ${t.name} (${b.type}):`, e)
@@ -93,5 +97,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, mode, oxRatio, ranAt: new Date().toISOString(), results })
+  return NextResponse.json({ ok: true, mode, oxRatio, difficultyRatio, ranAt: new Date().toISOString(), results })
 }

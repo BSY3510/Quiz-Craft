@@ -93,10 +93,39 @@ export function coerceType(questions: NormalizedQuestion[], type: string): Norma
 
 export type Difficulty = 'easy' | 'medium' | 'hard'
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard']
+export interface DifficultyRatio { easy: number; medium: number; hard: number }
 
-// 각 문제에 난이도 부여 지시(생성 프롬프트 뒤에 덧붙임). 객관식·OX 공통.
-export function buildDifficultyNote(): string {
+const DIFFICULTY_LABELS: Record<Difficulty, string> = { easy: '쉬움', medium: '보통', hard: '어려움' }
+
+// 난이도 지시(생성 프롬프트 뒤에 덧붙임). 객관식·OX 공통. 세 가지 모드:
+//  - fixed: 모든 문제를 지정 난이도로 강제(2번 — 관리자 난이도 지정 출제).
+//  - ratio: 지정 비율로 분포(3번 — cron 난이도 비율). 배치를 쪼개지 않고 프롬프트로 유도.
+//  - (없음): 자연 분포(현행 기본).
+export function buildDifficultyNote(opts?: { fixed?: Difficulty; ratio?: DifficultyRatio }): string {
+  if (opts?.fixed) {
+    const d = opts.fixed
+    return `\n\n[난이도 지정] 모든 문제를 "${d}"(${DIFFICULTY_LABELS[d]}) 난이도로 출제하세요. 각 문제의 difficulty 필드를 반드시 "${d}"로 설정하세요.`
+  }
+  if (opts?.ratio) {
+    const { easy, medium, hard } = opts.ratio
+    return `\n\n[난이도 분포] 생성하는 문제들의 난이도를 대략 easy ${easy}% · medium ${medium}% · hard ${hard}% 비율이 되도록 분포시키세요. 각 문제에 difficulty 필드("easy"/"medium"/"hard")를 실제 난이도에 맞게 반드시 포함하세요.`
+  }
   return `\n\n[난이도 부여] 각 문제에 difficulty 필드를 반드시 포함하세요. 문제의 실제 난이도에 맞춰 "easy"(기초·정의), "medium"(응용·이해), "hard"(심화·함정/예외) 중 하나로 정하고, 한쪽에 치우치지 말고 자연스럽게 분포시키세요.`
+}
+
+// 비율 정규화: 각 값 0~100 정수로 보정 후, 합이 100이 아니면 잔여분을 medium 에 몰아 합 100 보장.
+export function normalizeDifficultyRatio(raw: unknown): DifficultyRatio {
+  const obj = (raw ?? {}) as Record<string, unknown>
+  const clamp = (v: unknown) => Math.min(100, Math.max(0, Math.round(Number(v)) || 0))
+  let easy = clamp(obj.easy)
+  let hard = clamp(obj.hard)
+  if (easy + hard > 100) {
+    // easy/hard 만으로 100 초과 시 hard 부터 줄여 100 이내로
+    hard = Math.max(0, 100 - easy)
+    if (easy > 100) { easy = 100; hard = 0 }
+  }
+  const medium = 100 - easy - hard // 잔여분은 medium
+  return { easy, medium, hard }
 }
 
 export interface NormalizedQuestion {

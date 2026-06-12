@@ -37,6 +37,10 @@ export default function AdminSettingsPage() {
   const [autoGenCategoryIds, setAutoGenCategoryIds] = useState<string[]>([])
   const [autoGenCount, setAutoGenCount] = useState(5)
   const [autoGenOxRatio, setAutoGenOxRatio] = useState(0)
+  // 난이도 비율: easy/hard 만 직접 조정, medium 은 잔여(=100-easy-hard)로 자동 계산
+  const [diffEasy, setDiffEasy] = useState(30)
+  const [diffHard, setDiffHard] = useState(20)
+  const diffMedium = Math.max(0, 100 - diffEasy - diffHard)
   const [isSavingAutoGen, setIsSavingAutoGen] = useState(false)
 
   useEffect(() => {
@@ -44,7 +48,7 @@ export default function AdminSettingsPage() {
       const [{ data }, { data: cats }] = await Promise.all([
         supabase
           .from('site_settings')
-          .select('google_login_enabled, auto_approve_signup, gemini_model, auto_generate_enabled, auto_generate_mode, auto_generate_category_ids, auto_generate_count, auto_generate_ox_ratio')
+          .select('google_login_enabled, auto_approve_signup, gemini_model, auto_generate_enabled, auto_generate_mode, auto_generate_category_ids, auto_generate_count, auto_generate_ox_ratio, auto_generate_difficulty_ratio')
           .eq('id', 1)
           .single(),
         supabase.from('categories').select('id, name').eq('active', true).order('created_at'),
@@ -58,6 +62,13 @@ export default function AdminSettingsPage() {
         setAutoGenCategoryIds(Array.isArray(data.auto_generate_category_ids) ? data.auto_generate_category_ids : [])
         setAutoGenCount(data.auto_generate_count ?? 5)
         setAutoGenOxRatio(data.auto_generate_ox_ratio ?? 0)
+        const dr = (data.auto_generate_difficulty_ratio ?? {}) as { easy?: number; hard?: number }
+        const clampPct = (v: unknown, fallback: number) => {
+          const n = Number(v)
+          return Number.isFinite(n) ? Math.min(100, Math.max(0, Math.round(n))) : fallback
+        }
+        setDiffEasy(clampPct(dr.easy, 30))
+        setDiffHard(clampPct(dr.hard, 20))
       }
       if (cats) setCategories(cats)
       setIsLoading(false)
@@ -101,7 +112,13 @@ export default function AdminSettingsPage() {
 
   const handleSaveAutoGenConfig = async () => {
     setIsSavingAutoGen(true)
-    const res = await setAutoGenerateConfig({ mode: autoGenMode, categoryIds: autoGenCategoryIds, count: autoGenCount, oxRatio: autoGenOxRatio })
+    const res = await setAutoGenerateConfig({
+      mode: autoGenMode,
+      categoryIds: autoGenCategoryIds,
+      count: autoGenCount,
+      oxRatio: autoGenOxRatio,
+      difficultyRatio: { easy: diffEasy, medium: diffMedium, hard: diffHard },
+    })
     setIsSavingAutoGen(false)
     if (res.error) return toast.error(res.error)
     toast.success('자동 출제 설정이 저장되었습니다.')
@@ -319,6 +336,41 @@ export default function AdminSettingsPage() {
               <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
                 예: 문항 수 5 · OX 40% → 객관식 3 + OX 2. 0%면 전부 객관식, 100%면 전부 OX입니다.
               </p>
+            </div>
+
+            {/* 난이도 비율 (easy/hard 조절, medium 은 잔여) */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">난이도 비율 <span className="font-normal text-slate-400 dark:text-slate-500">(합 100% · 보통은 나머지로 자동)</span></label>
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                    <span>쉬움(easy)</span><span className="text-indigo-600 dark:text-indigo-400">{diffEasy}%</span>
+                  </div>
+                  <input
+                    type="range" min={0} max={100} step={5}
+                    value={diffEasy}
+                    onChange={(e) => setDiffEasy(Math.min(Number(e.target.value), 100 - diffHard))}
+                    disabled={isLoading}
+                    className="w-full accent-emerald-500"
+                  />
+                </div>
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                    <span>어려움(hard)</span><span className="text-indigo-600 dark:text-indigo-400">{diffHard}%</span>
+                  </div>
+                  <input
+                    type="range" min={0} max={100} step={5}
+                    value={diffHard}
+                    onChange={(e) => setDiffHard(Math.min(Number(e.target.value), 100 - diffEasy))}
+                    disabled={isLoading}
+                    className="w-full accent-rose-500"
+                  />
+                </div>
+                <div className="flex justify-between text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 rounded-lg px-3 py-2">
+                  <span>보통(medium) — 자동</span><span className="text-slate-700 dark:text-slate-200">{diffMedium}%</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">야간 자동 출제에만 적용됩니다. 정확한 분배가 아니라 AI에게 주는 목표 분포입니다.</p>
             </div>
 
             <button
