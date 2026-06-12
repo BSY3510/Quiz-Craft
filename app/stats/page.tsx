@@ -1,9 +1,11 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import MonthlyGoalCard from './MonthlyGoalCard'
 
 // 데이터베이스 조인 결과를 위한 타입 정의
 interface AttemptData {
+  question_id: string | null;
   is_correct: boolean;
   questions: {
     category_id: string;
@@ -18,22 +20,39 @@ export default async function StatsPage() {
     redirect('/login')
   }
 
-  // 1. 활성화된 전체 카테고리 정보 가져오기
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('id, name')
-    .eq('active', true)
-
-  // 2. 현재 사용자의 모든 풀이 기록(Attempt)과 연관된 문제의 카테고리 정보 가져오기
-  const { data: attemptsData } = await supabase
-    .from('attempts')
-    .select(`
-      is_correct,
-      questions ( category_id )
-    `)
-    .eq('user_id', user.id)
+  // 필요한 데이터 병렬 조회: 분야 / 풀이기록 / 활성문제(진도 분모) / 월간목표 / 이번 달 풀이 수
+  const [
+    { data: categories },
+    { data: attemptsData },
+    { data: activeQ },
+    { data: profile },
+    { data: monthlySolved },
+  ] = await Promise.all([
+    supabase.from('categories').select('id, name').eq('active', true),
+    supabase.from('attempts').select('question_id, is_correct, questions ( category_id )').eq('user_id', user.id),
+    supabase.from('questions').select('category_id').eq('status', 'active'),
+    supabase.from('profiles').select('monthly_goal').eq('id', user.id).single(),
+    supabase.rpc('my_monthly_solved'),
+  ])
 
   const attempts = (attemptsData as unknown as AttemptData[]) || []
+
+  // 분야별 전체 활성 문제 수(진도 분모)
+  const totalByCategory = new Map<string, number>()
+  for (const q of (activeQ as { category_id: string | null }[] | null) ?? []) {
+    if (!q.category_id) continue
+    totalByCategory.set(q.category_id, (totalByCategory.get(q.category_id) ?? 0) + 1)
+  }
+
+  // 분야별 "내가 푼 (서로 다른) 문제" 집합(진도 분자). 보관/삭제된 문제는 조인에서 빠져 active 기준이 됨.
+  const solvedByCategory = new Map<string, Set<string>>()
+  for (const a of attempts) {
+    const cat = a.questions?.category_id
+    if (!cat || !a.question_id) continue
+    const set = solvedByCategory.get(cat) ?? new Set<string>()
+    set.add(a.question_id)
+    solvedByCategory.set(cat, set)
+  }
 
   // 3. 통계 데이터 집계 로직
   const totalSolved = attempts.length
@@ -47,7 +66,12 @@ export default async function StatsPage() {
     const catTotal = catAttempts.length
     const catCorrect = catAttempts.filter(a => a.is_correct).length
     const catAccuracy = catTotal === 0 ? 0 : Math.round((catCorrect / catTotal) * 100)
-    
+
+    // 진도: 푼(서로 다른) 문제 / 전체 활성 문제
+    const progressTotal = totalByCategory.get(category.id) ?? 0
+    const progressSolved = Math.min(solvedByCategory.get(category.id)?.size ?? 0, progressTotal)
+    const progressPct = progressTotal > 0 ? Math.round((progressSolved / progressTotal) * 100) : 0
+
     // 정답률이 50% 미만이고 3문제 이상 풀었을 때 약점으로 진단
     const isWeakness = catTotal >= 3 && catAccuracy < 50
 
@@ -57,9 +81,15 @@ export default async function StatsPage() {
       totalAttempts: catTotal,
       correct: catCorrect,
       accuracy: catAccuracy,
+      progressSolved,
+      progressTotal,
+      progressPct,
       isWeakness
     }
   }) || []
+
+  const monthlyGoal = (profile as { monthly_goal: number | null } | null)?.monthly_goal ?? null
+  const monthlySolvedCount = (monthlySolved as number | null) ?? 0
 
   // 한 번이라도 시도한 분야 중 약점 분야 필터링
   const weakCategories = categoryStats.filter(stat => stat.isWeakness)
@@ -89,6 +119,9 @@ export default async function StatsPage() {
             </div>
           </div>
         </section>
+
+        {/* 이번 달 목표 (9-1) */}
+        <MonthlyGoalCard goal={monthlyGoal} solved={monthlySolvedCount} />
 
         {/* 약점 진단 경고창 */}
         {weakCategories.length > 0 && (
@@ -130,6 +163,19 @@ export default async function StatsPage() {
                   <span>정답: {stat.correct}문제</span>
                   <span>총 시도: {stat.totalAttempts}문제</span>
                 </div>
+
+                {/* 진도: 푼 문제 / 전체 (9-1) */}
+                {stat.progressTotal > 0 && (
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-700">
+                    <div className="flex justify-between text-xs font-medium text-slate-400 dark:text-slate-500 mb-1">
+                      <span>진도</span>
+                      <span>{stat.progressSolved} / {stat.progressTotal}문제 ({stat.progressPct}%)</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-indigo-400 transition-all duration-500" style={{ width: `${stat.progressPct}%` }} />
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}

@@ -29,7 +29,20 @@ export interface Profile {
   xp: number
   current_streak: number
   last_active_date: string | null
+  // 9-1 월간 목표(이번 달 N문제). null이면 미설정.
+  monthly_goal: number | null
   created_at: string
+}
+
+// 9-3 데일리 미션 (get_or_create_today_missions RPC 반환 행)
+export interface DailyMissionRow {
+  id: string
+  kind: 'solve_any' | 'solve_category' | 'solve_type' | 'solve_difficulty' | (string & {})
+  param: string | null
+  target: number
+  reward_xp: number
+  claimed: boolean
+  progress: number
 }
 
 export interface Category {

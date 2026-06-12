@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { CategoryList } from './CategoryList'
 import OnboardingTour from './OnboardingTour'
 import LevelBanner from './LevelBanner'
+import DailyMissions from './DailyMissions'
 
 export default async function QuizDashboardPage() {
   const supabase = await createClient()
@@ -64,6 +65,9 @@ export default async function QuizDashboardPage() {
 
         {/* 내 레벨·학습 현황 배너 (9-2) */}
         <LevelBanner xp={profile?.xp || 0} streak={profile?.current_streak || 0} />
+
+        {/* 오늘의 미션 (9-3) */}
+        <DailyMissions categories={categories ?? []} />
 
         {/* 리더보드·배지·북마크 진입 버튼 */}
         <div className="grid grid-cols-3 gap-3">
