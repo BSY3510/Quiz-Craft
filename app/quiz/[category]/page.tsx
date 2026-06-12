@@ -11,6 +11,7 @@ import { Skeleton } from '@/app/components/Skeleton'
 import { DifficultyBadge } from '@/app/components/ui'
 import QuestionReactions from '@/app/components/QuestionReactions'
 import CodeBlock from '@/app/components/CodeBlock'
+import ShareResult from './ShareResult'
 
 // ✅ 정답(answer_id)과 해설(explanation)은 클라이언트로 받지 않는다(SEC-A).
 //    제출 후 서버 채점 결과(GradeResult)로만 노출된다.
@@ -333,6 +334,7 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
             <button onClick={handleRestart} className="w-full p-3.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">
               {hasMore ? '새 문제로 다시 풀기' : '다시 풀기'}
             </button>
+            <ShareResult categoryId={categoryId} correct={correctCount} answered={answered} accuracy={accuracy} skipped={skippedCount} />
             <div className="flex gap-2">
               <button onClick={() => router.push(`/review/${categoryId}`)} className="flex-1 p-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 transition-colors">오답 노트</button>
               <button onClick={() => router.push('/quiz')} className="flex-1 p-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 transition-colors">분야 목록</button>

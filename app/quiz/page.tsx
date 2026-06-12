@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { CategoryList } from './CategoryList'
 import OnboardingTour from './OnboardingTour'
+import LevelBanner from './LevelBanner'
 
 export default async function QuizDashboardPage() {
   const supabase = await createClient()
@@ -61,19 +62,8 @@ export default async function QuizDashboardPage() {
         {/* 온보딩 튜토리얼 (첫 방문 1회 자동 + 사용법 보기) */}
         <OnboardingTour />
 
-        {/* 내 학습 현황 배너 */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-5 text-white shadow-md flex justify-between items-center">
-          <div>
-            <p className="text-blue-100 text-sm font-medium mb-1">내 학습 현황</p>
-            <p className="text-2xl font-black">{profile?.xp || 0} <span className="text-base font-medium">XP</span></p>
-          </div>
-          <div className="text-right flex flex-col items-end">
-            <p className="text-blue-100 text-sm font-medium mb-1">연속 학습</p>
-            <p className="text-2xl font-black flex items-center gap-1">
-              🔥 {profile?.current_streak || 0} <span className="text-base font-medium">일차</span>
-            </p>
-          </div>
-        </div>
+        {/* 내 레벨·학습 현황 배너 (9-2) */}
+        <LevelBanner xp={profile?.xp || 0} streak={profile?.current_streak || 0} />
 
         {/* 리더보드·배지·북마크 진입 버튼 */}
         <div className="grid grid-cols-3 gap-3">
