@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
-import { setQuestionStatus, setQuestionsStatus } from '../actions'
+import { setQuestionStatus, setQuestionsStatus, deleteQuestion, deleteQuestions } from '../actions'
 import { useToast } from '@/app/components/Toast'
+import { useConfirm } from '@/app/components/Confirm'
 import { Pagination } from '@/app/components/Pagination'
 import { Badge, statusTone, DifficultyBadge } from '@/app/components/ui'
 import QuestionEditModal from '../QuestionEditModal'
@@ -17,6 +18,7 @@ export default function AdminDashboardStatsPage() {
   const supabase = createClient()
   const adminPath = useAdminPath()
   const toast = useToast()
+  const confirm = useConfirm()
 
   const [questions, setQuestions] = useState<DashQuestion[]>([])
   const [categories, setCategories] = useState<Pick<Category, 'id' | 'name'>[]>([])
@@ -30,9 +32,12 @@ export default function AdminDashboardStatsPage() {
   // 모달 관리 상태
   const [editingQuestion, setEditingQuestion] = useState<DashQuestion | null>(null)
 
+  // 일괄 작업용 선택 상태 (선택된 문제 id 집합)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
   // ✅ 페이지네이션 전용 로컬 상태 추가
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
+  const [itemsPerPage, setItemsPerPage] = useState(10)
 
   useEffect(() => {
     async function fetchData() {
@@ -78,6 +83,57 @@ export default function AdminDashboardStatsPage() {
     toast.success(`${ids.length}건을 일괄 승인했습니다.`)
   }
 
+  // 단건 영구 삭제 (보관 상태에서만 노출). 확인 모달 필수.
+  const handleDelete = async (q: DashQuestion) => {
+    const ok = await confirm({
+      title: '문제 영구 삭제',
+      message: `이 문제를 데이터베이스에서 영구 삭제할까요?\n되돌릴 수 없습니다. (풀이 기록은 보존됩니다)\n\n"${q.question_text.slice(0, 40)}${q.question_text.length > 40 ? '…' : ''}"`,
+      confirmText: '영구 삭제',
+      danger: true,
+    })
+    if (!ok) return
+    const res = await deleteQuestion(q.id)
+    if (res.error) { toast.error(res.error); return }
+    setQuestions(prev => prev.filter(x => x.id !== q.id))
+    setSelectedIds(prev => { const next = new Set(prev); next.delete(q.id); return next })
+    toast.success('문제를 영구 삭제했습니다.')
+  }
+
+  // 선택 항목 일괄 상태 변경 (보관/복원)
+  const handleBulkStatus = async (status: 'active' | 'archived') => {
+    const ids = [...selectedIds]
+    if (!ids.length) return
+    const res = await setQuestionsStatus(ids, status)
+    if (res.error) { toast.error(res.error); return }
+    setQuestions(questions.map(q => selectedIds.has(q.id) ? { ...q, status } : q))
+    setSelectedIds(new Set())
+    toast.success(`${ids.length}건을 ${status === 'active' ? '복원' : '보관'}했습니다.`)
+  }
+
+  // 선택 항목 일괄 영구 삭제. 보관(archived) 상태인 항목만 삭제되며, 나머지는 안내한다.
+  const handleBulkDelete = async () => {
+    const targets = questions.filter(q => selectedIds.has(q.id) && q.status === 'archived')
+    const skipped = selectedIds.size - targets.length
+    if (!targets.length) {
+      toast.error('보관(archived) 상태의 문제만 영구 삭제할 수 있습니다.')
+      return
+    }
+    const ok = await confirm({
+      title: '선택 항목 영구 삭제',
+      message: `보관 상태 ${targets.length}건을 영구 삭제할까요?${skipped > 0 ? `\n(보관 상태가 아닌 ${skipped}건은 제외됩니다)` : ''}\n되돌릴 수 없습니다. (풀이 기록은 보존됩니다)`,
+      confirmText: '영구 삭제',
+      danger: true,
+    })
+    if (!ok) return
+    const ids = targets.map(q => q.id)
+    const res = await deleteQuestions(ids)
+    if (res.error) { toast.error(res.error); return }
+    const deleted = new Set(ids)
+    setQuestions(prev => prev.filter(q => !deleted.has(q.id)))
+    setSelectedIds(new Set())
+    toast.success(`${res.count ?? ids.length}건을 영구 삭제했습니다.${skipped > 0 ? ` (${skipped}건 제외)` : ''}`)
+  }
+
   // 필터링 및 정렬 파이프라인
   const keyword = search.trim().toLowerCase()
   const filteredAndSorted = questions
@@ -92,10 +148,33 @@ export default function AdminDashboardStatsPage() {
       return 0
     })
 
-  // ✅ 정렬 및 필터링 처리가 끝난 최종 배열을 10개 단위로 조각내기
+  // ✅ 정렬 및 필터링 처리가 끝난 최종 배열을 페이지 크기 단위로 조각내기
   const totalPages = Math.ceil(filteredAndSorted.length / itemsPerPage)
   const paginatedQuestions = filteredAndSorted.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
   const pendingCount = questions.filter(q => q.status === 'pending_review').length
+
+  // 현재 페이지 행들의 일괄 선택 상태 (전체선택 체크박스 제어용)
+  const pageIds = paginatedQuestions.map(q => q.id)
+  const allPageSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.has(id))
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+  const toggleSelectPage = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (allPageSelected) pageIds.forEach(id => next.delete(id))
+      else pageIds.forEach(id => next.add(id))
+      return next
+    })
+  }
+
+  // 선택 항목 중 보관 상태 개수 (일괄 삭제 가능 건수 안내용)
+  const selectedArchivedCount = questions.filter(q => selectedIds.has(q.id) && q.status === 'archived').length
 
   // 필터/정렬 변경 시 1페이지로 리셋하는 핸들러 (effect 대신 이벤트에서 처리)
   const onFilterCategory = (v: string) => { setFilterCategory(v); setCurrentPage(1) }
@@ -103,6 +182,7 @@ export default function AdminDashboardStatsPage() {
   const onFilterDifficulty = (v: string) => { setFilterDifficulty(v); setCurrentPage(1) }
   const onSearch = (v: string) => { setSearch(v); setCurrentPage(1) }
   const onSortType = (v: string) => { setSortType(v); setCurrentPage(1) }
+  const onItemsPerPage = (v: number) => { setItemsPerPage(v); setCurrentPage(1) }
 
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 relative">
@@ -181,6 +261,23 @@ export default function AdminDashboardStatsPage() {
           </div>
         </div>
 
+        {/* 일괄 작업 바 (선택된 항목이 있을 때만) */}
+        {selectedIds.size > 0 && (
+          <div className="flex flex-wrap items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/50 rounded-xl p-3">
+            <span className="font-bold text-blue-800 dark:text-blue-300 text-sm mr-1">{selectedIds.size}건 선택됨</span>
+            <button onClick={() => handleBulkStatus('archived')} className="px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600">📦 보관</button>
+            <button onClick={() => handleBulkStatus('active')} className="px-3 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded-lg border border-green-200 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/50">↩ 복원(노출)</button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={selectedArchivedCount === 0}
+              className="px-3 py-1.5 bg-red-50 text-red-700 text-xs font-bold rounded-lg border border-red-200 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed dark:bg-red-900/30 dark:text-red-400 dark:border-red-900/50"
+            >
+              🗑 영구 삭제{selectedArchivedCount > 0 ? ` (${selectedArchivedCount})` : ''}
+            </button>
+            <button onClick={() => setSelectedIds(new Set())} className="ml-auto px-3 py-1.5 text-slate-500 dark:text-slate-400 text-xs font-bold hover:underline">선택 해제</button>
+          </div>
+        )}
+
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
           {isLoading ? (
             <div className="p-8 text-center text-slate-500 dark:text-slate-400">데이터 집계 중...</div>
@@ -191,6 +288,15 @@ export default function AdminDashboardStatsPage() {
               <table className="w-full text-sm text-left">
                 <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
                   <tr>
+                    <th className="p-4 w-10">
+                      <input
+                        type="checkbox"
+                        checked={allPageSelected}
+                        onChange={toggleSelectPage}
+                        aria-label="현재 페이지 전체 선택"
+                        className="w-4 h-4 accent-blue-600 cursor-pointer"
+                      />
+                    </th>
                     <th className="p-4">분야</th>
                     <th className="p-4">난이도</th>
                     <th className="p-4 w-1/2">문제 내용 (클릭하여 전체 수정)</th>
@@ -201,7 +307,16 @@ export default function AdminDashboardStatsPage() {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-800 dark:text-slate-200">
                   {/* ✅ paginatedQuestions를 순회 출력 */}
                   {paginatedQuestions.map(q => (
-                    <tr key={q.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer" onClick={() => setEditingQuestion({...q})}>
+                    <tr key={q.id} className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer ${selectedIds.has(q.id) ? 'bg-blue-50/60 dark:bg-blue-900/10' : ''}`} onClick={() => setEditingQuestion({...q})}>
+                      <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(q.id)}
+                          onChange={() => toggleSelect(q.id)}
+                          aria-label="문제 선택"
+                          className="w-4 h-4 accent-blue-600 cursor-pointer"
+                        />
+                      </td>
                       <td className="p-4 font-bold text-blue-600 dark:text-blue-400 uppercase">{q.category_id}</td>
                       <td className="p-4"><DifficultyBadge difficulty={q.difficulty} /></td>
                       <td className="p-4">{q.question_text} ✏️</td>
@@ -217,6 +332,17 @@ export default function AdminDashboardStatsPage() {
                             <button onClick={() => handleSetStatus(q.id, 'archived')} className="px-2 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded border border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600">✕ 반려</button>
                           </div>
                         )}
+                        {q.status === 'active' && (
+                          <div className="flex gap-1 mt-2">
+                            <button onClick={() => handleSetStatus(q.id, 'archived')} className="px-2 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded border border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600">📦 보관</button>
+                          </div>
+                        )}
+                        {q.status === 'archived' && (
+                          <div className="flex gap-1 mt-2">
+                            <button onClick={() => handleSetStatus(q.id, 'active')} className="px-2 py-1 bg-green-50 text-green-700 text-xs font-bold rounded border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/50">↩ 복원</button>
+                            <button onClick={() => handleDelete(q)} className="px-2 py-1 bg-red-50 text-red-700 text-xs font-bold rounded border border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-900/50">🗑 삭제</button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -226,8 +352,24 @@ export default function AdminDashboardStatsPage() {
           )}
         </div>
 
-        {/* 페이지네이션 (prev/next + 생략) */}
-        <Pagination page={currentPage} totalPages={totalPages} onChange={setCurrentPage} />
+        {/* 페이지 크기 선택 + 페이지네이션 */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+            <span>총 {filteredAndSorted.length}개</span>
+            <span className="text-slate-300 dark:text-slate-600">·</span>
+            <label className="flex items-center gap-1">
+              페이지당
+              <select
+                value={itemsPerPage}
+                onChange={(e) => onItemsPerPage(Number(e.target.value))}
+                className="p-1.5 border rounded-lg text-sm text-slate-800 dark:text-slate-100 dark:border-slate-600 dark:bg-slate-700"
+              >
+                {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n}개</option>)}
+              </select>
+            </label>
+          </div>
+          <Pagination page={currentPage} totalPages={totalPages} onChange={setCurrentPage} />
+        </div>
       </div>
 
       {/* 문제 수정 모달 (공용 컴포넌트) */}

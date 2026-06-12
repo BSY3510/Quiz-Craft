@@ -278,6 +278,50 @@ export async function setQuestionsStatus(ids: string[], status: QStatus) {
   return { success: true, count: ids.length }
 }
 
+// 6-3. 문제 영구 삭제 (단건). 2단계 정책: archived(보관) 상태인 문제만 삭제 가능.
+//      attempts/reports FK 는 ON DELETE SET NULL(phase-question-delete.sql)이라 이력은 보존된다.
+export async function deleteQuestion(id: string) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
+
+  const supabase = await createClient()
+  // status='archived' 조건을 함께 걸어 보관 상태가 아닌 문제는 삭제되지 않게 강제한다.
+  const { data, error } = await supabase
+    .from('questions')
+    .delete()
+    .eq('id', id)
+    .eq('status', 'archived')
+    .select('id')
+
+  if (error) return { error: '문제 삭제 중 오류가 발생했습니다.' }
+  if (!data || data.length === 0) return { error: '보관(archived) 상태의 문제만 영구 삭제할 수 있습니다.' }
+
+  revalidatePath('/quiz')
+  revalidatePath('/admin-secret')
+  return { success: true }
+}
+
+// 6-4. 문제 영구 삭제 (일괄). 단건과 동일하게 archived 상태만 삭제되며, 실제 삭제된 건수를 돌려준다.
+export async function deleteQuestions(ids: string[]) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
+  if (!ids.length) return { error: '대상 문제가 없습니다.' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('questions')
+    .delete()
+    .in('id', ids)
+    .eq('status', 'archived')
+    .select('id')
+
+  if (error) return { error: '일괄 삭제 중 오류가 발생했습니다.' }
+
+  revalidatePath('/quiz')
+  revalidatePath('/admin-secret')
+  return { success: true, count: data?.length ?? 0 }
+}
+
 // 6. AI 모델 버전 저장 (site_settings.gemini_model)
 export async function setGeminiModel(model: string) {
   const c = await checkAdmin()
