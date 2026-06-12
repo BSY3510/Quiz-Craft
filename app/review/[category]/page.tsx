@@ -32,8 +32,18 @@ export default async function CategoryReviewPage({ params }: { params: Promise<{
 
   const attempts = (attemptsData as unknown as AttemptLite[]) || []
 
-  // 2. Leitner 일정 계산 → 복습 카드(졸업 제외)
-  const cardMetas = computeCards(attempts, Date.now())
+  // 1-2. 건너뛰기 기록(이 분야)도 합산 — SRS 에선 건너뜀 = 오답과 동일(복습 대상 + 연속정답 끊김).
+  const { data: skipData } = await supabase
+    .from('question_skips')
+    .select('question_id, created_at, questions!inner ( category_id )')
+    .eq('user_id', user.id)
+    .eq('questions.category_id', categoryId)
+
+  const skipEvents: AttemptLite[] = ((skipData as unknown as { question_id: string; created_at: string }[]) || [])
+    .map((s) => ({ question_id: s.question_id, is_correct: false, created_at: s.created_at }))
+
+  // 2. Leitner 일정 계산 → 복습 카드(졸업 제외). 풀이 기록 + 건너뜀을 함께 투입.
+  const cardMetas = computeCards([...attempts, ...skipEvents], Date.now())
 
   // 3. 카드 문제들의 본문 조회(정답/해설 제외). RLS가 active만 반환 → 보관/삭제된 문제는 자동 제외.
   const ids = cardMetas.map((c) => c.questionId)

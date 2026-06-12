@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect, useCallback, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { submitReport } from '@/app/actions/report' // ✅ 신고 서버 액션 추가
@@ -68,9 +68,11 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
   const [currentIndex, setCurrentIndex] = useState(0)
   // 세션 집계
   const [correctCount, setCorrectCount] = useState(0)
+  const [skippedCount, setSkippedCount] = useState(0) // 8-1 이번 세션 건너뛴 수
   const [sessionXp, setSessionXp] = useState(0)
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [wasSkipped, setWasSkipped] = useState(false) // 8-1 현재 문제를 건너뛴 결과인지
   const [isGrading, setIsGrading] = useState(false)
   // ✅ 서버 채점 결과(정/오답·정답ID·해설·획득XP)를 담는다.
   const [result, setResult] = useState<GradeResult | null>(null)
@@ -108,9 +110,11 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
   const resetSessionState = () => {
     setCurrentIndex(0)
     setCorrectCount(0)
+    setSkippedCount(0)
     setSessionXp(0)
     setSelectedOption(null)
     setIsSubmitted(false)
+    setWasSkipped(false)
     setResult(null)
   }
 
@@ -158,6 +162,104 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
     </div>
   )
 
+  // 현재 문제 / 세션 종료 여부 (핸들러·키보드 효과보다 먼저 계산해야 훅 순서가 안정)
+  const currentQuestion = questions[currentIndex]
+  const isExhausted = currentIndex >= questions.length
+  const isCorrect = isSubmitted && !wasSkipped && result?.isCorrect === true
+
+  const handleSelect = (id: string) => {
+    if (isSubmitted) return
+    setSelectedOption(id)
+  }
+
+  const handleSubmit = useCallback(async () => {
+    if (!currentQuestion || !selectedOption || isGrading) return
+    setIsGrading(true)
+
+    // ✅ 정답 판정·XP 적립은 보안 정의자 함수가 서버에서 결정한다.
+    const { data, error } = await supabase.rpc('grade_and_award', {
+      p_question_id: currentQuestion.id,
+      p_selected_option_id: selectedOption,
+    })
+    setIsGrading(false)
+
+    if (error || !data) {
+      console.error('grade_and_award error:', error)
+      toast.error('채점 처리 중 오류가 발생했습니다. 다시 시도해 주세요.')
+      return
+    }
+
+    setResult({
+      isCorrect: Boolean(data.is_correct),
+      answerId: String(data.answer_id),
+      explanation: String(data.explanation ?? ''),
+      xpAwarded: Number(data.xp_awarded ?? 0),
+    })
+    setWasSkipped(false)
+    setIsSubmitted(true)
+    if (data.is_correct) setCorrectCount((c) => c + 1)
+    setSessionXp((x) => x + Number(data.xp_awarded ?? 0))
+  }, [currentQuestion, selectedOption, isGrading, supabase, toast])
+
+  // 8-1 건너뛰기: 채점하지 않고 정답·해설만 공개. record_skip 이 별도 테이블에 기록(XP·스트릭 무영향).
+  const handleSkip = useCallback(async () => {
+    if (!currentQuestion || isSubmitted || isGrading) return
+    setIsGrading(true)
+    const { data, error } = await supabase.rpc('record_skip', { p_question_id: currentQuestion.id })
+    setIsGrading(false)
+
+    if (error || !data) {
+      console.error('record_skip error:', error)
+      toast.error('처리 중 오류가 발생했습니다. 다시 시도해 주세요.')
+      return
+    }
+
+    setResult({
+      isCorrect: false,
+      answerId: String(data.answer_id),
+      explanation: String(data.explanation ?? ''),
+      xpAwarded: 0,
+    })
+    setWasSkipped(true)
+    setIsSubmitted(true)
+    setSkippedCount((c) => c + 1)
+  }, [currentQuestion, isSubmitted, isGrading, supabase, toast])
+
+  const handleNext = useCallback(() => {
+    setCurrentIndex((prev) => prev + 1)
+    setSelectedOption(null)
+    setIsSubmitted(false)
+    setWasSkipped(false)
+    setResult(null)
+    setIsReportModalOpen(false) // 다음 문제로 갈 때 모달 닫기
+    setReportReason('')
+  }, [])
+
+  // 8-3 키보드 단축키: 숫자키 보기 선택 · Enter 제출/다음 · S 건너뛰기
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (isLoading || isExhausted || !currentQuestion || isReportModalOpen) return
+      const tag = (e.target as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+
+      if (!isSubmitted) {
+        const n = Number(e.key)
+        if (Number.isInteger(n) && n >= 1 && n <= currentQuestion.options.length) {
+          setSelectedOption(currentQuestion.options[n - 1].id)
+          e.preventDefault()
+          return
+        }
+        if (e.key === 's' || e.key === 'S' || e.key === 'ㄴ') { e.preventDefault(); handleSkip(); return }
+        if (e.key === 'Enter' && selectedOption) { e.preventDefault(); handleSubmit(); return }
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        handleNext()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isLoading, isExhausted, currentQuestion, isReportModalOpen, isSubmitted, selectedOption, handleSkip, handleSubmit, handleNext])
+
   if (isLoading) return (
     <main className="flex min-h-screen flex-col items-center bg-slate-50 dark:bg-slate-900 p-4 pt-8">
       <div className="w-full max-w-md space-y-6">
@@ -196,12 +298,10 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
     </main>
   )
 
-  const currentQuestion = questions[currentIndex]
-  const isExhausted = currentIndex >= questions.length
-
   if (isExhausted) {
     const total = questions.length
-    const accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0
+    const answered = total - skippedCount // 정답률 분모는 건너뜀 제외
+    const accuracy = answered > 0 ? Math.round((correctCount / answered) * 100) : 0
     const subsetCount = difficultyFilter === 'all' ? pool.length : pool.filter((q) => q.difficulty === difficultyFilter).length
     const hasMore = subsetCount > SESSION_SIZE
     return (
@@ -210,11 +310,13 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
         <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 text-center">
           <span className="text-5xl">{accuracy >= 80 ? '🏆' : accuracy >= 50 ? '🎉' : '💪'}</span>
           <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mt-3 mb-1">세션 완료!</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">이번 세션 {total}문제를 모두 풀었어요.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
+            이번 세션 {total}문제를 모두 진행했어요{skippedCount > 0 ? ` (건너뜀 ${skippedCount})` : ''}.
+          </p>
 
           <div className="grid grid-cols-3 gap-2 mb-6">
             <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
-              <p className="text-2xl font-black text-slate-800 dark:text-slate-100">{correctCount}<span className="text-base text-slate-400">/{total}</span></p>
+              <p className="text-2xl font-black text-slate-800 dark:text-slate-100">{correctCount}<span className="text-base text-slate-400">/{answered}</span></p>
               <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">정답</p>
             </div>
             <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
@@ -241,51 +343,6 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
     )
   }
 
-  const handleSelect = (id: string) => {
-    if (isSubmitted) return
-    setSelectedOption(id)
-  }
-
-  const handleSubmit = async () => {
-    if (!selectedOption || isGrading) return
-    setIsGrading(true)
-
-    // ✅ 정답 판정·XP 적립은 보안 정의자 함수가 서버에서 결정한다.
-    //    함수를 클라이언트에서 직접 호출(1홉)해 채점 지연을 줄인다.
-    const { data, error } = await supabase.rpc('grade_and_award', {
-      p_question_id: currentQuestion.id,
-      p_selected_option_id: selectedOption,
-    })
-    setIsGrading(false)
-
-    if (error || !data) {
-      console.error('grade_and_award error:', error)
-      toast.error('채점 처리 중 오류가 발생했습니다. 다시 시도해 주세요.')
-      return
-    }
-
-    // 결과를 받은 뒤 한 번에 제출 상태로 전환(중간 깜빡임 방지)
-    setResult({
-      isCorrect: Boolean(data.is_correct),
-      answerId: String(data.answer_id),
-      explanation: String(data.explanation ?? ''),
-      xpAwarded: Number(data.xp_awarded ?? 0),
-    })
-    setIsSubmitted(true)
-    // 세션 집계 누적
-    if (data.is_correct) setCorrectCount((c) => c + 1)
-    setSessionXp((x) => x + Number(data.xp_awarded ?? 0))
-  }
-
-  const handleNext = () => {
-    setCurrentIndex(prev => prev + 1)
-    setSelectedOption(null)
-    setIsSubmitted(false)
-    setResult(null)
-    setIsReportModalOpen(false) // 다음 문제로 갈 때 모달 닫기
-    setReportReason('')
-  }
-
   // ✅ 신고 접수 핸들러
   const handleReportSubmit = async () => {
     if (!reportReason.trim()) { toast.error('신고 사유를 입력해 주세요.'); return }
@@ -302,8 +359,6 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
       toast.error(`오류: ${result.error}`)
     }
   }
-
-  const isCorrect = isSubmitted && result?.isCorrect === true
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-slate-50 dark:bg-slate-900 p-4 pt-8 relative">
@@ -352,7 +407,7 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
           )}
 
           <div className={currentQuestion.type === 'true-false' ? 'grid grid-cols-2 gap-3' : 'flex flex-col gap-3'}>
-            {currentQuestion.options.map((option) => {
+            {currentQuestion.options.map((option, optIdx) => {
               const isOX = currentQuestion.type === 'true-false'
               const isSelected = selectedOption === option.id
               // ✅ 정답 여부는 제출 후 서버 결과로만 판단
@@ -371,9 +426,12 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
                 <button
                   key={option.id}
                   onClick={() => handleSelect(option.id)}
-                  className={`rounded-lg border-2 transition-all ${isOX ? 'p-6 text-center text-lg font-bold' : 'w-full p-4 text-left'} ${optionClass}`}
+                  className={`rounded-lg border-2 transition-all ${isOX ? 'p-6 text-center text-lg font-bold' : 'w-full p-4 text-left flex items-center gap-2.5'} ${optionClass}`}
                 >
-                  {option.text}
+                  {!isOX && (
+                    <span className="shrink-0 inline-flex w-5 h-5 items-center justify-center rounded text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300">{optIdx + 1}</span>
+                  )}
+                  <span>{option.text}</span>
                 </button>
               )
             })}
@@ -382,10 +440,10 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
 
         <div className="flex flex-col gap-4 mb-8">
           {isSubmitted && result ? (
-            <div className={`p-4 rounded-xl border ${isCorrect ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-900/50' : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-900/50'}`}>
+            <div className={`p-4 rounded-xl border ${wasSkipped ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-900/50' : isCorrect ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-900/50' : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-900/50'}`}>
               <div className="flex items-center justify-between mb-2">
-                <span className={`font-bold text-lg ${isCorrect ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {isCorrect ? '정답입니다! 🎉' : '오답입니다.'}
+                <span className={`font-bold text-lg ${wasSkipped ? 'text-amber-600 dark:text-amber-400' : isCorrect ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {wasSkipped ? '건너뛴 문제예요 — 정답을 확인하세요' : isCorrect ? '정답입니다! 🎉' : '오답입니다.'}
                 </span>
                 {/* ✅ 실제 획득 XP를 표시(BUG-3) */}
                 {result.xpAwarded > 0 && (
@@ -414,11 +472,27 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
                   🚨 신고
                 </button>
               </div>
+              <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-2">Enter 또는 Space로 다음 문제</p>
             </div>
           ) : (
-            <button onClick={handleSubmit} disabled={!selectedOption || isGrading} className="w-full p-4 font-bold text-white bg-slate-800 rounded-xl hover:bg-slate-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm dark:bg-slate-700 dark:hover:bg-slate-600">
-              {isGrading ? '채점 중...' : '제출하기'}
-            </button>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSkip}
+                  disabled={isGrading}
+                  className="px-4 py-4 font-bold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50 shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 whitespace-nowrap"
+                  title="모르겠으면 건너뛰기 (단축키 S)"
+                >
+                  모르겠어요
+                </button>
+                <button onClick={handleSubmit} disabled={!selectedOption || isGrading} className="flex-1 p-4 font-bold text-white bg-slate-800 rounded-xl hover:bg-slate-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm dark:bg-slate-700 dark:hover:bg-slate-600">
+                  {isGrading ? '처리 중...' : '제출하기'}
+                </button>
+              </div>
+              <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                단축키: 숫자키 보기 선택 · Enter 제출 · S 건너뛰기
+              </p>
+            </div>
           )}
         </div>
       </div>
