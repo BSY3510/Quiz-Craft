@@ -69,8 +69,8 @@ export default async function QuizDashboardPage() {
         {/* 오늘의 미션 (9-3) */}
         <DailyMissions categories={categories ?? []} />
 
-        {/* 리더보드·배지·북마크 진입 버튼 */}
-        <div className="grid grid-cols-3 gap-3">
+        {/* 리더보드·배지·북마크·통계 진입 버튼 */}
+        <div className="grid grid-cols-2 gap-3">
           <Link href="/leaderboard" className="flex flex-col items-center justify-center gap-1 w-full p-4 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors shadow-sm group dark:bg-amber-900/20 dark:border-amber-900 dark:hover:bg-amber-900/30">
             <span className="text-2xl group-hover:scale-110 transition-transform">🏆</span>
             <span className="text-xs font-bold text-amber-800 dark:text-amber-300">리더보드</span>
@@ -82,6 +82,10 @@ export default async function QuizDashboardPage() {
           <Link href="/bookmarks" className="flex flex-col items-center justify-center gap-1 w-full p-4 bg-rose-50 border border-rose-200 rounded-xl hover:bg-rose-100 transition-colors shadow-sm group dark:bg-rose-900/20 dark:border-rose-900 dark:hover:bg-rose-900/30">
             <span className="text-2xl group-hover:scale-110 transition-transform">🔖</span>
             <span className="text-xs font-bold text-rose-800 dark:text-rose-300">북마크</span>
+          </Link>
+          <Link href="/stats" className="flex flex-col items-center justify-center gap-1 w-full p-4 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors shadow-sm group dark:bg-emerald-900/20 dark:border-emerald-900 dark:hover:bg-emerald-900/30">
+            <span className="text-2xl group-hover:scale-110 transition-transform">📊</span>
+            <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">학습 통계</span>
           </Link>
         </div>
 
