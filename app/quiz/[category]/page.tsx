@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { submitReport } from '@/app/actions/report' // ✅ 신고 서버 액션 추가
 import { useToast } from '@/app/components/Toast'
+import { useConfirm } from '@/app/components/Confirm'
 import { Modal } from '@/app/components/Modal'
 import { Skeleton } from '@/app/components/Skeleton'
 import { DifficultyBadge } from '@/app/components/ui'
@@ -58,6 +59,7 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
   const router = useRouter()
   const supabase = createClient()
   const toast = useToast()
+  const confirm = useConfirm()
 
   const [pool, setPool] = useState<Question[]>([])        // 분야의 전체 활성 문제(세션 재시작용)
   const [questions, setQuestions] = useState<Question[]>([]) // 이번 세션 문항(최대 SESSION_SIZE)
@@ -119,8 +121,19 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
   }
 
   // 난이도 필터 변경 → 해당 난이도로 세션 재구성.
-  const applyDifficulty = (filter: DifficultyFilter) => {
+  // 진행 중(1문제 이상 풀었고 세션이 안 끝남)이면 세션 집계가 초기화되므로 먼저 확인.
+  const applyDifficulty = async (filter: DifficultyFilter) => {
     if (filter === difficultyFilter) return
+    const exhausted = currentIndex >= questions.length
+    const inProgress = !exhausted && (currentIndex > 0 || isSubmitted)
+    if (inProgress) {
+      const ok = await confirm({
+        title: '난이도 변경',
+        message: '진행 중인 세션이 초기화됩니다.\n지금까지 푼 기록(XP·정답)은 이미 저장되었지만, 이번 세션 집계(정답 수·획득 XP 표시)는 사라집니다. 난이도를 바꿀까요?',
+        confirmText: '변경',
+      })
+      if (!ok) return
+    }
     setDifficultyFilter(filter)
     setQuestions(sliceFor(filter))
     resetSessionState()
