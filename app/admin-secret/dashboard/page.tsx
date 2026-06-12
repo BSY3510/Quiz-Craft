@@ -99,13 +99,15 @@ export default function AdminDashboardStatsPage() {
     toast.success('문제를 영구 삭제했습니다.')
   }
 
-  // 선택 항목 일괄 상태 변경 (보관/복원)
+  // 선택 항목 일괄 상태 변경 (보관/복원). 이미 해당 상태인 항목은 제외하고 실제 바뀔 것만 처리.
   const handleBulkStatus = async (status: 'active' | 'archived') => {
-    const ids = [...selectedIds]
-    if (!ids.length) return
+    const targets = questions.filter(q => selectedIds.has(q.id) && q.status !== status)
+    if (!targets.length) return
+    const ids = targets.map(q => q.id)
     const res = await setQuestionsStatus(ids, status)
     if (res.error) { toast.error(res.error); return }
-    setQuestions(questions.map(q => selectedIds.has(q.id) ? { ...q, status } : q))
+    const changed = new Set(ids)
+    setQuestions(questions.map(q => changed.has(q.id) ? { ...q, status } : q))
     setSelectedIds(new Set())
     toast.success(`${ids.length}건을 ${status === 'active' ? '복원' : '보관'}했습니다.`)
   }
@@ -173,8 +175,10 @@ export default function AdminDashboardStatsPage() {
     })
   }
 
-  // 선택 항목 중 보관 상태 개수 (일괄 삭제 가능 건수 안내용)
-  const selectedArchivedCount = questions.filter(q => selectedIds.has(q.id) && q.status === 'archived').length
+  // 선택 항목 중 일괄 작업이 실제로 적용될 대상 건수 (버튼 비활성/안내용)
+  const selectedArchivedCount = questions.filter(q => selectedIds.has(q.id) && q.status === 'archived').length   // 영구 삭제 대상
+  const selectedArchiveCount = questions.filter(q => selectedIds.has(q.id) && q.status !== 'archived').length    // 보관 대상(이미 보관 제외)
+  const selectedRestoreCount = questions.filter(q => selectedIds.has(q.id) && q.status !== 'active').length      // 복원 대상(이미 노출 제외)
 
   // 필터/정렬 변경 시 1페이지로 리셋하는 핸들러 (effect 대신 이벤트에서 처리)
   const onFilterCategory = (v: string) => { setFilterCategory(v); setCurrentPage(1) }
@@ -265,8 +269,20 @@ export default function AdminDashboardStatsPage() {
         {selectedIds.size > 0 && (
           <div className="flex flex-wrap items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/50 rounded-xl p-3">
             <span className="font-bold text-blue-800 dark:text-blue-300 text-sm mr-1">{selectedIds.size}건 선택됨</span>
-            <button onClick={() => handleBulkStatus('archived')} className="px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600">📦 보관</button>
-            <button onClick={() => handleBulkStatus('active')} className="px-3 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded-lg border border-green-200 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/50">↩ 복원(노출)</button>
+            <button
+              onClick={() => handleBulkStatus('archived')}
+              disabled={selectedArchiveCount === 0}
+              className="px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600"
+            >
+              📦 보관{selectedArchiveCount > 0 ? ` (${selectedArchiveCount})` : ''}
+            </button>
+            <button
+              onClick={() => handleBulkStatus('active')}
+              disabled={selectedRestoreCount === 0}
+              className="px-3 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded-lg border border-green-200 hover:bg-green-100 disabled:opacity-40 disabled:cursor-not-allowed dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/50"
+            >
+              ↩ 복원(노출){selectedRestoreCount > 0 ? ` (${selectedRestoreCount})` : ''}
+            </button>
             <button
               onClick={handleBulkDelete}
               disabled={selectedArchivedCount === 0}

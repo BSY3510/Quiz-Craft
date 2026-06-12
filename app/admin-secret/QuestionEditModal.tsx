@@ -2,8 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import { Modal } from '@/app/components/Modal'
+import { createClient } from '@/utils/supabase/client'
 import { updateQuestion } from './actions'
 import { useToast } from '@/app/components/Toast'
+
+// 타임스탬프(timestamptz)를 한국어 날짜·시각으로 표시
+function formatDateTime(value: string | null): string {
+  if (!value) return '-'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '-'
+  return d.toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' })
+}
 
 export interface EditableQuestion {
   id: string
@@ -34,8 +43,30 @@ export default function QuestionEditModal({
   const toast = useToast()
   const [form, setForm] = useState<EditableQuestion | null>(question)
   const [saving, setSaving] = useState(false)
+  // 등록일/수정일은 모달이 열릴 때 해당 문제만 직접 조회(목록 RPC를 건드리지 않기 위함)
+  const [meta, setMeta] = useState<{ created_at: string; updated_at: string } | null>(null)
 
-  useEffect(() => setForm(question), [question])
+  // prop 으로 받은 question 이 바뀌면 폼을 그 값으로 초기화(렌더 중 동기화 — React 권장 패턴)
+  const [prevQuestion, setPrevQuestion] = useState(question)
+  if (question !== prevQuestion) {
+    setPrevQuestion(question)
+    setForm(question)
+  }
+
+  useEffect(() => {
+    const id = question?.id
+    if (!id) return
+    let active = true
+    const supabase = createClient()
+    supabase
+      .from('questions')
+      .select('created_at, updated_at')
+      .eq('id', id)
+      .single()
+      .then(({ data }) => { if (active && data) setMeta(data) })
+    // cleanup 에서 초기화 → 다른 문제로 전환/닫힘 시 이전 문제의 날짜가 잠깐 보이지 않게
+    return () => { active = false; setMeta(null) }
+  }, [question?.id])
 
   const save = async () => {
     if (!form) return
@@ -49,6 +80,8 @@ export default function QuestionEditModal({
     const res = await updateQuestion(form.id, fields)
     setSaving(false)
     if (res.error) { toast.error(res.error); return }
+    // 트리거가 서버에서 updated_at 을 갱신하므로, 화면에는 즉시 현재 시각으로 반영
+    setMeta((m) => (m ? { ...m, updated_at: new Date().toISOString() } : m))
     onSaved(form.id, fields)
     toast.success('문제가 수정되었습니다!')
     onClose()
@@ -58,7 +91,14 @@ export default function QuestionEditModal({
     <Modal open={!!question} onClose={onClose} className="max-w-2xl" labelledBy="q-edit-title">
       {form && (
         <div className="space-y-5">
-          <h2 id="q-edit-title" className="text-xl font-black text-slate-800 dark:text-slate-100">문제 수정</h2>
+          <div>
+            <h2 id="q-edit-title" className="text-xl font-black text-slate-800 dark:text-slate-100">문제 수정</h2>
+            {meta && (
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                등록 {formatDateTime(meta.created_at)} · 수정 {formatDateTime(meta.updated_at)}
+              </p>
+            )}
+          </div>
 
           <div>
             <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">질문 내용</label>
