@@ -61,16 +61,28 @@ export function buildPrompt(
 
 export type GenQuestionType = 'multiple-choice' | 'true-false'
 
-// 출제 유형 지시(객관식=기본, OX=true-false). 마스터 프롬프트 뒤에 덧붙인다.
-// OX는 마스터의 "4지선다" 류 지시를 덮어써야 하므로 강하게 명시한다.
-export function buildTypeNote(type: string): string {
-  if (type !== 'true-false') return ''
-  return `\n\n[중요·문제 유형 강제] 위 지시 중 보기 개수에 관한 내용은 무시하고, 이번에는 반드시 모든 문제를 OX(참/거짓) 형식으로 출제하세요:
+// OX 전용 기본 지시(관리자가 prompt_true_false 를 비워두면 이 값을 사용).
+// 관리자 프롬프트 화면의 'OX' 탭 '기본값 불러오기' 가 채우는 텍스트이기도 하다.
+export const DEFAULT_TRUE_FALSE_PROMPT = `[중요·문제 유형 강제] 위 지시 중 보기 개수에 관한 내용은 무시하고, 이번에는 반드시 모든 문제를 OX(참/거짓) 형식으로 출제하세요:
 - type: "true-false"
 - question_text: 참인지 거짓인지 판별 가능한 단정적 진술문 (질문형·의문문 금지)
 - options: 정확히 2개 — [{"id":"O","text":"맞다 (O)"},{"id":"X","text":"틀리다 (X)"}]
 - answer_id: "O" 또는 "X" 중 하나
 - explanation: 왜 맞거나 틀린지에 대한 근거`
+
+// 출제 유형 지시(공통 프롬프트 뒤에 덧붙임). 관리자가 유형별 프롬프트를 편집할 수 있다.
+//  - 객관식: prompt_multiple_choice 가 있으면 덧붙이고, 비우면 미적용(공통 프롬프트가 담당 = 현행).
+//  - OX:     prompt_true_false 가 있으면 그 값, 비우면 DEFAULT_TRUE_FALSE_PROMPT 를 강제 적용.
+export function buildTypeNote(
+  type: string,
+  prompts?: { multipleChoice?: string | null; trueFalse?: string | null }
+): string {
+  if (type === 'true-false') {
+    const body = (prompts?.trueFalse ?? '').trim() || DEFAULT_TRUE_FALSE_PROMPT
+    return `\n\n${body}`
+  }
+  const mc = (prompts?.multipleChoice ?? '').trim()
+  return mc ? `\n\n${mc}` : ''
 }
 
 // 요청 유형이 OX면 결과의 type 을 'true-false' 로 확정(모델이 누락/오기해도 보정).

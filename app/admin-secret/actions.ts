@@ -17,10 +17,10 @@ export async function generateQuizDraft(formData: FormData) {
   const type = (formData.get('type') as string) === 'true-false' ? 'true-false' : 'multiple-choice'
 
   try {
-    // ✅ DB에서 저장된 시스템 프롬프트 + 모델 불러오기
+    // ✅ DB에서 저장된 공통/유형별 프롬프트 + 모델 불러오기
     const { data: settings } = await supabase
       .from('site_settings')
-      .select('system_prompt, gemini_model')
+      .select('system_prompt, prompt_multiple_choice, prompt_true_false, gemini_model')
       .eq('id', 1)
       .single()
 
@@ -29,17 +29,21 @@ export async function generateQuizDraft(formData: FormData) {
     }
 
     // ✅ 분야 이름·가이드 조회 후 마스터 프롬프트에 치환({{category}}/{{count}}/{{category_guide}})
+    //    {{category}}는 AI용 정밀 표현(ai_name)이 있으면 그것을, 없으면 표시명(name)을 사용.
     const { data: cat } = await supabase
       .from('categories')
-      .select('name, prompt')
+      .select('name, ai_name, prompt')
       .eq('id', categoryId)
       .single()
 
     const systemPrompt = buildPrompt(settings.system_prompt, {
-      categoryName: cat?.name || categoryId,
+      categoryName: cat?.ai_name?.trim() || cat?.name || categoryId,
       count,
       guide: cat?.prompt || '',
-    }) + buildTypeNote(type) + buildDifficultyNote()
+    }) + buildTypeNote(type, {
+      multipleChoice: settings.prompt_multiple_choice,
+      trueFalse: settings.prompt_true_false,
+    }) + buildDifficultyNote()
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
     const modelName = settings.gemini_model || process.env.GEMINI_MODEL_VERSION || 'gemini-3.1-flash-lite'
@@ -229,15 +233,23 @@ export async function setAutoGenerateConfig(opts: {
   return { success: true }
 }
 
-// 5. AI 시스템 프롬프트 저장 (site_settings)
-export async function setSystemPrompt(prompt: string) {
+// 5. AI 프롬프트 저장 (공통 + 유형별). site_settings 의 3개 컬럼을 한 번에 갱신.
+//    객관식/OX 보조 프롬프트는 비우면 null 로 저장(객관식=미적용, OX=코드 기본값 사용).
+export async function setPrompts(prompts: { common: string; multipleChoice: string; trueFalse: string }) {
   const c = await checkAdmin()
   if (!c.ok) return { error: c.error }
+
+  const common = prompts.common?.trim()
+  if (!common) return { error: '공통 프롬프트는 비울 수 없습니다.' }
 
   const supabase = await createClient()
   const { error } = await supabase
     .from('site_settings')
-    .update({ system_prompt: prompt })
+    .update({
+      system_prompt: common,
+      prompt_multiple_choice: prompts.multipleChoice?.trim() || null,
+      prompt_true_false: prompts.trueFalse?.trim() || null,
+    })
     .eq('id', 1)
 
   if (error) return { error: '프롬프트 저장 중 오류가 발생했습니다.' }

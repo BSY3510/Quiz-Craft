@@ -24,7 +24,7 @@ export default async function QuizDashboardPage() {
 
   const { data: categories } = await supabase
     .from('categories')
-    .select('id, name, icon')
+    .select('id, name, icon, description')
     .eq('active', true)
     .order('created_at', { ascending: true })
 

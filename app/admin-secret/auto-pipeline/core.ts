@@ -37,7 +37,7 @@ export async function generateForCategory(
 ): Promise<PipelineResult> {
   const { data: settings } = await supabase
     .from('site_settings')
-    .select('system_prompt, gemini_model')
+    .select('system_prompt, prompt_multiple_choice, prompt_true_false, gemini_model')
     .eq('id', 1)
     .single()
 
@@ -47,7 +47,7 @@ export async function generateForCategory(
 
   const { data: cat } = await supabase
     .from('categories')
-    .select('name, prompt')
+    .select('name, ai_name, prompt')
     .eq('id', categoryId)
     .single()
 
@@ -63,10 +63,13 @@ export async function generateForCategory(
 
   const systemPrompt =
     buildPrompt(settings.system_prompt, {
-      categoryName: cat?.name || categoryId,
+      categoryName: cat?.ai_name?.trim() || cat?.name || categoryId,
       count,
       guide: cat?.prompt || '',
-    }) + buildTypeNote(type) + buildDifficultyNote() + buildAvoidanceNote(existingTexts)
+    }) + buildTypeNote(type, {
+      multipleChoice: settings.prompt_multiple_choice,
+      trueFalse: settings.prompt_true_false,
+    }) + buildDifficultyNote() + buildAvoidanceNote(existingTexts)
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
   const modelName = settings.gemini_model || process.env.GEMINI_MODEL_VERSION || 'gemini-3.1-flash-lite'

@@ -80,7 +80,13 @@ export default function AdminCategoriesPage() {
   const handleSaveEdit = async () => {
     if (!editingCategory || !editingCategory.name.trim()) return
 
-    const res = await updateCategory(editingCategory.id, editingCategory.name, editingCategory.prompt || '', editingCategory.icon || '')
+    const res = await updateCategory(editingCategory.id, {
+      name: editingCategory.name,
+      prompt: editingCategory.prompt || '',
+      icon: editingCategory.icon || '',
+      description: editingCategory.description || '',
+      ai_name: editingCategory.ai_name || '',
+    })
     if (!res.error) {
       toast.success('분야 정보가 수정되었습니다.')
       setEditingCategory(null)
@@ -230,13 +236,35 @@ export default function AdminCategoriesPage() {
               <input type="text" value={editingCategory.id} disabled className="w-full p-2.5 bg-slate-100 border border-slate-200 rounded-lg font-mono text-sm text-slate-400 uppercase dark:bg-slate-900 dark:border-slate-700 dark:text-slate-500" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">새 분야 이름</label>
+              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">표시 이름 <span className="font-normal text-slate-400 dark:text-slate-500">(사용자 화면에 보이는 짧은 이름)</span></label>
               <input
                 type="text"
                 value={editingCategory.name}
                 onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                placeholder="예: 홍길동"
                 className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">부제(설명) <span className="font-normal text-slate-400 dark:text-slate-500">(선택 · 카드 부제로 표시)</span></label>
+              <input
+                type="text"
+                value={editingCategory.description || ''}
+                onChange={(e) => setEditingCategory({ ...editingCategory, description: e.target.value })}
+                placeholder="예: 1990년대 발라드 가수"
+                className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">AI용 이름 <span className="font-normal text-slate-400 dark:text-slate-500">(선택 · 화면에 안 보임 · 비우면 표시 이름 사용)</span></label>
+              <input
+                type="text"
+                value={editingCategory.ai_name || ''}
+                onChange={(e) => setEditingCategory({ ...editingCategory, ai_name: e.target.value })}
+                placeholder="예: 홍길동(1990년대 발라드 가수) — 동명이인 구분용"
+                className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">출제 프롬프트의 <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded font-mono">{'{{category}}'}</code> 치환에 사용됩니다. 동명이인·중의어 분야의 정확도를 위해 사용.</p>
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">분야 아이콘 <span className="font-normal text-slate-400 dark:text-slate-500">(선택 · 비우면 기본 💡)</span></label>

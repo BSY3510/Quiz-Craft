@@ -38,6 +38,10 @@ export interface Category {
   active: boolean
   icon: string | null
   prompt: string | null
+  // 사용자에게 보일 한 줄 부제(카드 부제). null이면 미표시.
+  description: string | null
+  // 출제 시 {{category}} 치환에 쓰는 AI용 정밀 표현(동명이인 구분 등). null이면 name으로 폴백.
+  ai_name: string | null
   created_at: string
 }
 
@@ -78,7 +82,11 @@ export interface SiteSettings {
   id: number
   google_login_enabled: boolean
   auto_approve_signup: boolean
+  // 공통(마스터) 프롬프트. {{category}}/{{count}}/{{category_guide}} 치환자 포함.
   system_prompt: string | null
+  // 유형별 보조 프롬프트(공통 뒤에 덧붙임). null/빈값이면 객관식은 미적용, OX는 코드 기본값 사용.
+  prompt_multiple_choice: string | null
+  prompt_true_false: string | null
   gemini_model: string
 }
 

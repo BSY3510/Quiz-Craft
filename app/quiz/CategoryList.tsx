@@ -7,6 +7,7 @@ interface CategoryItem {
   id: string
   name: string
   icon: string | null
+  description: string | null
 }
 
 const FALLBACK_ICONS: Record<string, string> = { java: '☕', spring: '🍃', python: '🐍', react: '⚛️' }
@@ -53,7 +54,10 @@ export function CategoryList({ categories }: { categories: CategoryItem[] }) {
               <div className="text-4xl bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">{iconFor(category)}</div>
               <div className="flex-1">
                 <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">{category.name}</h2>
-                <p className="text-sm text-slate-400 dark:text-slate-500 uppercase">{category.id}</p>
+                {category.description && (
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{category.description}</p>
+                )}
+                <p className="text-xs text-slate-400 dark:text-slate-500 uppercase mt-0.5">{category.id}</p>
               </div>
             </div>
             <div className="flex bg-slate-50 dark:bg-slate-900/50 divide-x divide-slate-200 dark:divide-slate-700">
