@@ -14,21 +14,26 @@ export default async function QuizDashboardPage() {
 
   if (!user) redirect('/login')
 
-  // ✅ profile 객체에서 nickname과 role을 정상적으로 가져옵니다.
+  // ✅ profile 객체에서 nickname/role/즐겨찾기를 가져옵니다.
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, xp, current_streak, nickname')
+    .select('role, xp, current_streak, nickname, favorite_categories')
     .eq('id', user.id)
     .single()
 
   // ✅ 닉네임이 설정되어 있다면 닉네임을, 없다면 이메일 앞자리를 사용합니다.
   const displayName = profile?.nickname || user.email?.split('@')[0] || '학습자'
 
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('id, name, icon, description')
-    .eq('active', true)
-    .order('created_at', { ascending: true })
+  const [{ data: categories }, { data: groups }] = await Promise.all([
+    supabase
+      .from('categories')
+      .select('id, name, icon, description, group_id')
+      .eq('active', true)
+      .order('created_at', { ascending: true }),
+    supabase.from('category_groups').select('id, name, icon, sort_order'),
+  ])
+
+  const favorites = Array.isArray(profile?.favorite_categories) ? (profile.favorite_categories as string[]) : []
 
   const adminPath = `/admin-${process.env.NEXT_PUBLIC_ADMIN_PATH_SUFFIX || process.env.ADMIN_PATH_SUFFIX || 'secret'}`
 
@@ -89,8 +94,8 @@ export default async function QuizDashboardPage() {
           </Link>
         </div>
 
-        {/* 분야 선택 리스트 (검색 가능) */}
-        <CategoryList categories={categories ?? []} />
+        {/* 분야 선택 리스트 (그룹·즐겨찾기·검색·신청) */}
+        <CategoryList categories={categories ?? []} groups={groups ?? []} favorites={favorites} />
         
       </div>
     </main>

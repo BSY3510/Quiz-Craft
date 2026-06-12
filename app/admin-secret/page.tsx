@@ -15,12 +15,13 @@ export default async function AdminHomePage() {
 
   // KPI 집계 (병렬). RLS상 관리자가 전체를 볼 수 있다.
   // questions는 answer_id/explanation 컬럼 select가 회수돼 있어 select('*')가 막힌다 → 'id'로 카운트
-  const [members, pending, questions, questionsPending, reportsPending] = await Promise.all([
+  const [members, pending, questions, questionsPending, reportsPending, requestsPending] = await Promise.all([
     supabase.from('profiles').select('id', { count: 'exact', head: true }),
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('questions').select('id', { count: 'exact', head: true }),
     supabase.from('questions').select('id', { count: 'exact', head: true }).eq('status', 'pending_review'),
     supabase.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    supabase.from('category_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
   ])
 
   const KPIS = [
@@ -29,6 +30,7 @@ export default async function AdminHomePage() {
     { label: '문제 검증 대기', value: questionsPending.count ?? 0, href: `${adminPath}/dashboard`, highlight: (questionsPending.count ?? 0) > 0 },
     { label: '총 문제', value: questions.count ?? 0, href: `${adminPath}/dashboard`, highlight: false },
     { label: '신고 대기', value: reportsPending.count ?? 0, href: `${adminPath}/reports`, highlight: (reportsPending.count ?? 0) > 0 },
+    { label: '분야 신청 대기', value: requestsPending.count ?? 0, href: `${adminPath}/category-requests`, highlight: (requestsPending.count ?? 0) > 0 },
   ]
 
   const ADMIN_MENUS = [
@@ -36,7 +38,8 @@ export default async function AdminHomePage() {
     { name: '✍️ AI 출제 (검수)', path: `${adminPath}/generate`, desc: 'AI 초안 생성 후 검수 등록' },
     { name: '🤖 AI 자동 출제', path: `${adminPath}/auto-pipeline`, desc: '대량 자동 출제 파이프라인' },
     { name: '⚙️ AI 프롬프트', path: `${adminPath}/prompt`, desc: '출제 프롬프트·분야 가이드' },
-    { name: '📚 분야 관리', path: `${adminPath}/categories`, desc: '학습 분야 추가·수정·삭제' },
+    { name: '📚 분야 관리', path: `${adminPath}/categories`, desc: '학습 분야·그룹 추가·수정·삭제' },
+    { name: '🗂️ 분야 신청 관리', path: `${adminPath}/category-requests`, desc: '사용자 분야 신청 승인·반려' },
     { name: '👥 회원 관리', path: `${adminPath}/users`, desc: '가입 승인·계정 상태 관리' },
     { name: '🚨 신고 처리', path: `${adminPath}/reports`, desc: '오류 신고 확인·정정' },
     { name: '🛠️ 사이트 설정', path: `${adminPath}/settings`, desc: '구글 로그인 등 전역 설정' },
@@ -57,7 +60,7 @@ export default async function AdminHomePage() {
         </header>
 
         {/* KPI 요약 */}
-        <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {KPIS.map((k) => (
             <Link
               key={k.label}

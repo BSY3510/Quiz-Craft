@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
-import { createCategory, toggleCategoryActive, updateCategory, deleteCategory } from './actions'
+import { createCategory, toggleCategoryActive, updateCategory, deleteCategory, createGroup, updateGroup, deleteGroup } from './actions'
 import { useToast } from '@/app/components/Toast'
 import { useConfirm } from '@/app/components/Confirm'
 import { Modal } from '@/app/components/Modal'
-import type { Category } from '@/types/db'
+import type { Category, CategoryGroup } from '@/types/db'
 
 // 분야 아이콘 빠른 선택용 프리셋(프로그래밍/학습 분야 위주). 직접 입력도 가능.
 const PRESET_ICONS = ['💡', '🟦', '🟨', '🐍', '☕', '🗄️', '🌐', '⚛️', '📱', '🔧', '🧮', '📊', '🔐', '🐳', '🦀', '🐘', '📦', '🧪', '🖥️', '⚙️', '📚', '🧩', '🚀', '🔥']
@@ -57,7 +57,15 @@ export default function AdminCategoriesPage() {
   const confirm = useConfirm()
 
   const [categories, setCategories] = useState<Category[]>([])
+  const [groups, setGroups] = useState<CategoryGroup[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
+  // 그룹 관리 폼 + 인라인 편집
+  const [newGroupName, setNewGroupName] = useState('')
+  const [newGroupIcon, setNewGroupIcon] = useState('')
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null)
+  const [egName, setEgName] = useState('')
+  const [egIcon, setEgIcon] = useState('')
 
   // 등록/수정 폼 상태 관리
   const [newId, setNewId] = useState('')
@@ -77,20 +85,55 @@ export default function AdminCategoriesPage() {
         c.id.toLowerCase().includes(keyword) || (c.name || '').toLowerCase().includes(keyword))
     : categories
 
-  // 분야 목록 불러오기
+  // 분야·그룹 목록 불러오기
   const fetchCategories = async () => {
     setIsLoading(true)
-    const { data } = await supabase
-      .from('categories')
-      .select('*')
-      .order('created_at', { ascending: true })
-    if (data) setCategories(data)
+    const [{ data: cats }, { data: grps }] = await Promise.all([
+      supabase.from('categories').select('*').order('created_at', { ascending: true }),
+      supabase.from('category_groups').select('*').order('sort_order'),
+    ])
+    if (cats) setCategories(cats)
+    if (grps) setGroups(grps)
     setIsLoading(false)
   }
 
   useEffect(() => {
     fetchCategories()
   }, [supabase])
+
+  // 그룹 추가/삭제
+  const handleCreateGroup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newGroupName.trim()) return
+    const res = await createGroup(newGroupName, newGroupIcon)
+    if (res.error) { toast.error(res.error); return }
+    toast.success('그룹이 추가되었습니다.')
+    setNewGroupName(''); setNewGroupIcon('')
+    fetchCategories()
+  }
+
+  const handleDeleteGroup = async (g: CategoryGroup) => {
+    const ok = await confirm({
+      title: '그룹 삭제',
+      message: `「${g.name}」 그룹을 삭제할까요?\n이 그룹에 속한 분야는 삭제되지 않고 '미분류(기타)'로 이동합니다.`,
+      confirmText: '삭제',
+      danger: true,
+    })
+    if (!ok) return
+    const res = await deleteGroup(g.id)
+    if (res.error) { toast.error(res.error); return }
+    toast.success('그룹이 삭제되었습니다.')
+    fetchCategories()
+  }
+
+  const handleRenameGroup = async (g: CategoryGroup, name: string, icon: string) => {
+    const res = await updateGroup(g.id, name, icon, g.sort_order)
+    if (res.error) { toast.error(res.error); return }
+    toast.success('그룹이 수정되었습니다.')
+    fetchCategories()
+  }
+
+  const groupName = (id: string | null) => (id ? groups.find((g) => g.id === id)?.name ?? null : null)
 
   // 1. 신규 분야 등록
   const handleCreateCategory = async (e: React.FormEvent) => {
@@ -128,6 +171,7 @@ export default function AdminCategoriesPage() {
       icon: editingCategory.icon || '',
       description: editingCategory.description || '',
       ai_name: editingCategory.ai_name || '',
+      group_id: editingCategory.group_id || null,
     })
     if (!res.error) {
       toast.success('분야 정보가 수정되었습니다.')
@@ -248,6 +292,38 @@ export default function AdminCategoriesPage() {
           </form>
         </section>
 
+        {/* 상위 그룹 관리 (7번) */}
+        <section className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-3">
+          <h2 className="text-sm font-bold text-slate-700 dark:text-slate-300">🗂️ 상위 그룹 관리 <span className="font-normal text-slate-400 dark:text-slate-500">(분야를 묶어 사용자 화면에 섹션으로 노출)</span></h2>
+          <form onSubmit={handleCreateGroup} className="flex gap-2">
+            <input value={newGroupIcon} onChange={(e) => setNewGroupIcon(e.target.value)} placeholder="🗂️" className="w-16 text-center p-2.5 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500" />
+            <input value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="그룹명 (예: 프로그래밍)" className="flex-1 p-2.5 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500" />
+            <button type="submit" className="px-4 py-2.5 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 text-sm whitespace-nowrap dark:bg-slate-700 dark:hover:bg-slate-600">+ 그룹</button>
+          </form>
+          {groups.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {groups.map((g) =>
+                editingGroupId === g.id ? (
+                  <div key={g.id} className="flex items-center gap-1 bg-slate-50 dark:bg-slate-900/50 rounded-lg p-1 border border-blue-300 dark:border-blue-700">
+                    <input value={egIcon} onChange={(e) => setEgIcon(e.target.value)} className="w-10 text-center p-1.5 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded text-sm text-slate-800 dark:text-slate-100" />
+                    <input value={egName} onChange={(e) => setEgName(e.target.value)} className="w-28 p-1.5 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded text-sm text-slate-800 dark:text-slate-100" />
+                    <button onClick={() => { handleRenameGroup(g, egName, egIcon); setEditingGroupId(null) }} className="px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded">저장</button>
+                    <button onClick={() => setEditingGroupId(null)} className="px-2 py-1 text-slate-500 text-xs font-bold">취소</button>
+                  </div>
+                ) : (
+                  <div key={g.id} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg">
+                    <span>{g.icon || '🗂️'}</span>
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{g.name}</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">({categories.filter((c) => c.group_id === g.id).length})</span>
+                    <button onClick={() => { setEditingGroupId(g.id); setEgName(g.name); setEgIcon(g.icon || '') }} className="ml-1 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" title="수정">✏️</button>
+                    <button onClick={() => handleDeleteGroup(g)} className="text-xs text-slate-400 hover:text-red-500" title="삭제">🗑️</button>
+                  </div>
+                )
+              )}
+            </div>
+          )}
+        </section>
+
         {/* 분야 검색 */}
         <div className="relative">
           <input
@@ -288,6 +364,9 @@ export default function AdminCategoriesPage() {
                       <td className="p-4 font-bold">
                         <span className="mr-2">{category.icon || '💡'}</span>
                         {category.name}
+                        {groupName(category.group_id) && (
+                          <span className="ml-2 px-2 py-0.5 text-xs font-bold rounded-full bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300">{groupName(category.group_id)}</span>
+                        )}
                       </td>
                       <td className="p-4">
                         <button 
@@ -365,6 +444,17 @@ export default function AdminCategoriesPage() {
                 className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
               />
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">출제 프롬프트의 <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded font-mono">{'{{category}}'}</code> 치환에 사용됩니다. 동명이인·중의어 분야의 정확도를 위해 사용.</p>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">상위 그룹 <span className="font-normal text-slate-400 dark:text-slate-500">(선택 · 비우면 미분류)</span></label>
+              <select
+                value={editingCategory.group_id || ''}
+                onChange={(e) => setEditingCategory({ ...editingCategory, group_id: e.target.value || null })}
+                className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100"
+              >
+                <option value="">미분류</option>
+                {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">분야 아이콘 <span className="font-normal text-slate-400 dark:text-slate-500">(선택 · 비우면 기본 💡)</span></label>

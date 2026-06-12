@@ -31,6 +31,8 @@ export interface Profile {
   last_active_date: string | null
   // 9-1 월간 목표(이번 달 N문제). null이면 미설정.
   monthly_goal: number | null
+  // 1번 즐겨찾기 분야 id 배열. 비어 있으면 전체 노출.
+  favorite_categories: string[]
   created_at: string
 }
 
@@ -55,6 +57,31 @@ export interface Category {
   description: string | null
   // 출제 시 {{category}} 치환에 쓰는 AI용 정밀 표현(동명이인 구분 등). null이면 name으로 폴백.
   ai_name: string | null
+  // 상위 그룹(7번). null이면 미분류(기타).
+  group_id: string | null
+  created_at: string
+}
+
+// 상위 카테고리(그룹) — 7번
+export interface CategoryGroup {
+  id: string
+  name: string
+  icon: string | null
+  sort_order: number
+  created_at: string
+}
+
+// 분야 신청 — 4번
+export type CategoryRequestStatus = 'pending' | 'approved' | 'rejected' | (string & {})
+export interface CategoryRequest {
+  id: string
+  user_id: string | null
+  name: string
+  description: string | null
+  group_id: string | null
+  reason: string | null
+  status: CategoryRequestStatus
+  admin_note: string | null
   created_at: string
 }
 
