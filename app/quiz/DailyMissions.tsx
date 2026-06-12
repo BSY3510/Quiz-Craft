@@ -35,16 +35,28 @@ export default function DailyMissions({ categories }: { categories: { id: string
   const toast = useToast()
   const [missions, setMissions] = useState<DailyMissionRow[] | null>(null)
   const [claimingId, setClaimingId] = useState<string | null>(null)
+  const [collapsed, setCollapsed] = useState(false) // 접기 상태(localStorage 유지)
 
   const catName = (id: string) => categories.find((c) => c.id === id)?.name ?? id.toUpperCase()
 
   useEffect(() => {
     let active = true
+    const collapsedPref = localStorage.getItem('qc_missions_collapsed') === '1'
     supabase.rpc('get_or_create_today_missions').then(({ data }) => {
-      if (active) setMissions((data as DailyMissionRow[]) ?? [])
+      if (!active) return
+      setMissions((data as DailyMissionRow[]) ?? [])
+      setCollapsed(collapsedPref)
     })
     return () => { active = false }
   }, [supabase])
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev
+      localStorage.setItem('qc_missions_collapsed', next ? '1' : '0')
+      return next
+    })
+  }
 
   const claim = async (m: DailyMissionRow) => {
     setClaimingId(m.id)
@@ -76,14 +88,27 @@ export default function DailyMissions({ categories }: { categories: { id: string
   if (missions.length === 0) return null
 
   const allDone = missions.every((m) => m.claimed)
+  const claimedCount = missions.filter((m) => m.claimed).length
 
   return (
     <section className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-      <div className="flex items-center justify-between mb-3">
+      <button
+        onClick={toggleCollapsed}
+        aria-expanded={!collapsed}
+        className={`w-full flex items-center justify-between ${collapsed ? '' : 'mb-3'}`}
+      >
         <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400">🗓️ 오늘의 미션</h2>
-        {allDone && <span className="text-xs font-bold text-green-600 dark:text-green-400">모두 완료! 🎉</span>}
-      </div>
+        <div className="flex items-center gap-2">
+          {allDone ? (
+            <span className="text-xs font-bold text-green-600 dark:text-green-400">모두 완료! 🎉</span>
+          ) : (
+            <span className="text-xs font-bold text-slate-400 dark:text-slate-500">{claimedCount}/{missions.length} 완료</span>
+          )}
+          <span className="text-slate-400 dark:text-slate-500 text-xs">{collapsed ? '▼' : '▲'}</span>
+        </div>
+      </button>
 
+      {!collapsed && (
       <div className="space-y-3">
         {missions.map((m) => {
           const pct = m.target > 0 ? Math.min(100, Math.round((m.progress / m.target) * 100)) : 0
@@ -118,6 +143,7 @@ export default function DailyMissions({ categories }: { categories: { id: string
           )
         })}
       </div>
+      )}
     </section>
   )
 }
