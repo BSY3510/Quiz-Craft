@@ -43,16 +43,17 @@ export default function AdminReportsPage() {
 
   useEffect(() => {
     async function fetchData() {
-      const { data: cats } = await supabase.from('categories').select('id, name')
-      if (cats) setCategories(cats)
-
+      // 분야 목록과 신고 목록은 서로 독립적이므로 병렬 조회(왕복 1번 절약).
       // ✅ 정답(answer_id)/해설은 일반 권한에서 회수되므로 목록 임베드에서 제외.
       //    "문제 수정" 클릭 시 get_question_admin 정의자 함수로 정답 포함 단건 조회.
-      const { data: reps } = await supabase
-        .from('reports')
-        .select(`id, reason, status, created_at, questions(id, category_id, question_text, code_snippet, options)`)
-        .order('created_at', { ascending: false })
-
+      const [{ data: cats }, { data: reps }] = await Promise.all([
+        supabase.from('categories').select('id, name'),
+        supabase
+          .from('reports')
+          .select(`id, reason, status, created_at, questions(id, category_id, question_text, code_snippet, options)`)
+          .order('created_at', { ascending: false }),
+      ])
+      if (cats) setCategories(cats)
       // Supabase 중첩관계(questions)를 배열로 추론하므로 경계에서 캐스트(런타임은 단일 객체)
       if (reps) setReports(reps as unknown as ReportRow[])
       setIsLoading(false)

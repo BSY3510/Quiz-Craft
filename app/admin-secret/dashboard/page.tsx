@@ -39,12 +39,14 @@ export default function AdminDashboardStatsPage() {
 
   useEffect(() => {
     async function fetchData() {
-      const { data: cats } = await supabase.from('categories').select('id, name')
-      if (cats) setCategories(cats)
-
+      // 분야 목록과 문제+통계는 서로 독립적이므로 병렬 조회(왕복 1번 절약).
       // ✅ 정답(answer_id)/해설은 일반 권한에서 회수되므로 관리자 정의자 함수로 조회.
       //    함수가 문제 + 풀이 통계(total/correct)를 함께 반환한다.
-      const { data: qData } = await supabase.rpc('get_questions_admin')
+      const [{ data: cats }, { data: qData }] = await Promise.all([
+        supabase.from('categories').select('id, name'),
+        supabase.rpc('get_questions_admin'),
+      ])
+      if (cats) setCategories(cats)
 
       if (qData) {
         const enrichedQuestions: DashQuestion[] = (qData as AdminQuestionRow[]).map((q) => {
