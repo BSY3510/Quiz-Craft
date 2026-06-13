@@ -122,6 +122,8 @@ export interface SiteSettings {
   id: number
   google_login_enabled: boolean
   auto_approve_signup: boolean
+  // 가입 허용 이메일 도메인 화이트리스트. 빈 배열이면 제한 없음(모든 도메인 허용).
+  allowed_email_domains: string[]
   // 공통(마스터) 프롬프트. {{category}}/{{count}}/{{category_guide}} 치환자 포함.
   system_prompt: string | null
   // 유형별 보조 프롬프트(공통 뒤에 덧붙임). null/빈값이면 객관식은 미적용, OX는 코드 기본값 사용.

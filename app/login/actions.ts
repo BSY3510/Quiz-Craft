@@ -46,6 +46,25 @@ export async function signup(_prevState: AuthState, formData: FormData): Promise
     return { error: '비밀번호가 일치하지 않습니다.' }
   }
 
+  // 가입 허용 이메일 도메인 제한 (관리자가 site_settings 에 화이트리스트를 지정한 경우만).
+  // 빈 배열이면 제한 없음. 목록에 없는 도메인은 가입을 막고 다른 이메일을 안내한다.
+  // ⚠️ 구글 OAuth 가입은 이 액션을 거치지 않으므로 적용되지 않는다.
+  const { data: domainSetting } = await supabase
+    .from('site_settings')
+    .select('allowed_email_domains')
+    .eq('id', 1)
+    .single()
+  const allowedDomains: string[] = Array.isArray(domainSetting?.allowed_email_domains)
+    ? domainSetting.allowed_email_domains
+    : []
+  if (allowedDomains.length > 0) {
+    const domain = (email?.split('@')[1] ?? '').trim().toLowerCase()
+    const isAllowed = allowedDomains.some((d) => domain === String(d).trim().toLowerCase())
+    if (!isAllowed) {
+      return { error: `${allowedDomains.join(', ')} 이메일로만 가입할 수 있어요. 다른 이메일을 입력해 주세요.` }
+    }
+  }
+
   const marketingOptIn = formData.get('agree_marketing') === 'on'
 
   const { data, error } = await supabase.auth.signUp({

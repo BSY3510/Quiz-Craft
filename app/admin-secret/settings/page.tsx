@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
-import { setGoogleLogin, setGeminiModel, setAutoGenerate, setAutoGenerateConfig, setAutoApproveSignup } from '../actions'
+import { setGoogleLogin, setGeminiModel, setAutoGenerate, setAutoGenerateConfig, setAutoApproveSignup, setAllowedEmailDomains } from '../actions'
 import { useToast } from '@/app/components/Toast'
 
 interface Category { id: string; name: string }
@@ -26,6 +26,8 @@ export default function AdminSettingsPage() {
 
   const [isGoogleEnabled, setIsGoogleEnabled] = useState(false)
   const [isAutoApproveEnabled, setIsAutoApproveEnabled] = useState(false)
+  const [allowedDomainsText, setAllowedDomainsText] = useState('')
+  const [isSavingDomains, setIsSavingDomains] = useState(false)
   const [isAutoGenEnabled, setIsAutoGenEnabled] = useState(false)
   const [model, setModel] = useState('gemini-3.1-flash-lite')
   const [isSavingModel, setIsSavingModel] = useState(false)
@@ -48,7 +50,7 @@ export default function AdminSettingsPage() {
       const [{ data }, { data: cats }] = await Promise.all([
         supabase
           .from('site_settings')
-          .select('google_login_enabled, auto_approve_signup, gemini_model, auto_generate_enabled, auto_generate_mode, auto_generate_category_ids, auto_generate_count, auto_generate_ox_ratio, auto_generate_difficulty_ratio')
+          .select('google_login_enabled, auto_approve_signup, allowed_email_domains, gemini_model, auto_generate_enabled, auto_generate_mode, auto_generate_category_ids, auto_generate_count, auto_generate_ox_ratio, auto_generate_difficulty_ratio')
           .eq('id', 1)
           .single(),
         supabase.from('categories').select('id, name').eq('active', true).order('created_at'),
@@ -56,6 +58,7 @@ export default function AdminSettingsPage() {
       if (data) {
         setIsGoogleEnabled(data.google_login_enabled)
         setIsAutoApproveEnabled(data.auto_approve_signup ?? false)
+        setAllowedDomainsText(Array.isArray(data.allowed_email_domains) ? data.allowed_email_domains.join('\n') : '')
         setIsAutoGenEnabled(data.auto_generate_enabled ?? false)
         if (data.gemini_model) setModel(data.gemini_model)
         setAutoGenMode(data.auto_generate_mode === 'selected' ? 'selected' : 'rotation')
@@ -140,6 +143,19 @@ export default function AdminSettingsPage() {
     toast.success(`가입 자동 승인이 ${newValue ? '활성화' : '비활성화'} 되었습니다.`)
   }
 
+  const handleSaveDomains = async () => {
+    // 줄바꿈/쉼표/공백 어느 구분자로 입력해도 받아 정규화(소문자·선행 @ 제거·중복 제거)한다.
+    const domains = Array.from(new Set(
+      allowedDomainsText.split(/[\n,\s]+/).map((d) => d.trim().toLowerCase().replace(/^@+/, '')).filter(Boolean)
+    ))
+    setIsSavingDomains(true)
+    const res = await setAllowedEmailDomains(domains)
+    setIsSavingDomains(false)
+    if (res.error) return toast.error(res.error)
+    setAllowedDomainsText(domains.join('\n')) // 정규화 결과를 화면에 반영
+    toast.success(domains.length ? '허용 도메인이 저장되었습니다.' : '도메인 제한이 해제되었습니다(모든 도메인 허용).')
+  }
+
   const handleToggleAutoGen = async () => {
     const newValue = !isAutoGenEnabled
     const res = await setAutoGenerate(newValue)
@@ -193,6 +209,32 @@ export default function AdminSettingsPage() {
             className={`px-4 py-2 font-bold rounded-lg transition-colors disabled:opacity-50 shrink-0 ${isAutoApproveEnabled ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}
           >
             {isLoading ? '...' : isAutoApproveEnabled ? '활성화됨 (ON)' : '비활성화됨 (OFF)'}
+          </button>
+        </section>
+
+        <section className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-3">
+          <div>
+            <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">가입 허용 이메일 도메인</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              한 줄에 하나씩 입력하세요(예: company.com). 입력된 도메인의 이메일만 가입할 수 있고, 그 외 도메인은 다른 이메일을 입력하도록 안내됩니다.
+              <span className="font-bold"> 비워두면 모든 도메인을 허용</span>합니다.
+            </p>
+          </div>
+          <textarea
+            value={allowedDomainsText}
+            onChange={(e) => setAllowedDomainsText(e.target.value)}
+            disabled={isLoading}
+            rows={3}
+            placeholder={'company.com\nuniv.ac.kr'}
+            className="w-full p-2.5 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 disabled:opacity-50 font-mono"
+          />
+          <p className="text-[11px] text-amber-600 dark:text-amber-400">⚠️ 구글 로그인 가입은 이 제한을 우회합니다(이메일/비밀번호 가입에만 적용).</p>
+          <button
+            onClick={handleSaveDomains}
+            disabled={isLoading || isSavingDomains}
+            className="w-full p-2.5 font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-600 transition-colors text-sm"
+          >
+            {isSavingDomains ? '저장 중...' : '허용 도메인 저장'}
           </button>
         </section>
 

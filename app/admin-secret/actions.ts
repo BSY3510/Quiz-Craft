@@ -189,6 +189,29 @@ export async function setAutoApproveSignup(enabled: boolean) {
   return { success: true }
 }
 
+// 4-0b. 가입 허용 이메일 도메인 화이트리스트 저장 (site_settings.allowed_email_domains)
+//       빈 배열이면 제한 없음(모든 도메인 허용). 입력은 정규화(소문자·선행 @ 제거·중복 제거)한다.
+//       ⚠️ 구글 OAuth 가입에는 적용되지 않음(가입 서버 액션을 거치지 않음).
+export async function setAllowedEmailDomains(domains: string[]) {
+  const c = await checkAdmin()
+  if (!c.ok) return { error: c.error }
+
+  const clean = Array.from(new Set(
+    (Array.isArray(domains) ? domains : [])
+      .map((d) => String(d).trim().toLowerCase().replace(/^@+/, ''))
+      .filter(Boolean)
+  ))
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('site_settings')
+    .update({ allowed_email_domains: clean })
+    .eq('id', 1)
+
+  if (error) return { error: '설정 저장 중 오류가 발생했습니다.' }
+  return { success: true }
+}
+
 // 4-1. 자동 출제(cron) 활성화 토글 (site_settings)
 export async function setAutoGenerate(enabled: boolean) {
   const c = await checkAdmin()
