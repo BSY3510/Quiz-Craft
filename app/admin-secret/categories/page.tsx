@@ -7,35 +7,10 @@ import { useAdminPath } from '../useAdminPath'
 import { createCategory, toggleCategoryActive, updateCategory, deleteCategory, createGroup, updateGroup, deleteGroup } from './actions'
 import { useToast } from '@/app/components/Toast'
 import { useConfirm } from '@/app/components/Confirm'
-import { Modal } from '@/app/components/Modal'
 import CategoryBoardModal from './CategoryBoardModal'
+import CategoryEditModal from './CategoryEditModal'
+import CategoryStatsModal, { type CategoryStats } from './CategoryStatsModal'
 import type { Category, CategoryGroup } from '@/types/db'
-
-// 분야 아이콘 빠른 선택용 프리셋(프로그래밍/학습 분야 위주). 직접 입력도 가능.
-const PRESET_ICONS = ['💡', '🟦', '🟨', '🐍', '☕', '🗄️', '🌐', '⚛️', '📱', '🔧', '🧮', '📊', '🔐', '🐳', '🦀', '🐘', '📦', '🧪', '🖥️', '⚙️', '📚', '🧩', '🚀', '🔥']
-
-// 분야 통계 모달용 라벨/색상 (status·type·difficulty 표시 순서 고정)
-const STATUS_META: { key: string; label: string; color: string }[] = [
-  { key: 'active', label: '활성(노출)', color: 'bg-green-500' },
-  { key: 'pending_review', label: '검증 대기', color: 'bg-amber-500' },
-  { key: 'archived', label: '보관', color: 'bg-slate-400' },
-]
-const TYPE_META: { key: string; label: string; color: string }[] = [
-  { key: 'multiple-choice', label: '객관식', color: 'bg-blue-500' },
-  { key: 'true-false', label: 'OX', color: 'bg-indigo-500' },
-]
-const DIFF_META: { key: string; label: string; color: string }[] = [
-  { key: 'easy', label: '쉬움', color: 'bg-emerald-500' },
-  { key: 'medium', label: '보통', color: 'bg-amber-500' },
-  { key: 'hard', label: '어려움', color: 'bg-rose-500' },
-]
-
-interface CategoryStats {
-  total: number
-  status: Record<string, number>
-  type: Record<string, number>
-  difficulty: Record<string, number>
-}
 
 function tally(rows: { type: string; status: string; difficulty: string }[]) {
   const acc = (sel: (r: { type: string; status: string; difficulty: string }) => string) => {
@@ -223,40 +198,6 @@ export default function AdminCategoriesPage() {
     setStatsLoading(false)
   }
 
-  // 통계 한 그룹(상태/유형/난이도) 렌더 — 라벨·카운트·비율 막대. meta 외 값은 '기타'로 합산.
-  const renderStatGroup = (
-    title: string,
-    meta: { key: string; label: string; color: string }[],
-    counts: Record<string, number>,
-    total: number
-  ) => {
-    const known = meta.reduce((s, m) => s + (counts[m.key] || 0), 0)
-    const other = total - known
-    const rows = [
-      ...meta.map((m) => ({ label: m.label, color: m.color, n: counts[m.key] || 0 })),
-      ...(other > 0 ? [{ label: '기타', color: 'bg-slate-300 dark:bg-slate-600', n: other }] : []),
-    ]
-    return (
-      <div>
-        <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">{title}</h3>
-        <div className="space-y-1.5">
-          {rows.map((r) => {
-            const pct = total > 0 ? Math.round((r.n / total) * 100) : 0
-            return (
-              <div key={r.label} className="flex items-center gap-2 text-sm">
-                <span className="w-16 shrink-0 text-slate-600 dark:text-slate-300">{r.label}</span>
-                <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                  <div className={`h-full ${r.color}`} style={{ width: `${pct}%` }} />
-                </div>
-                <span className="w-14 shrink-0 text-right font-bold text-slate-700 dark:text-slate-200">{r.n}<span className="text-xs font-normal text-slate-400 dark:text-slate-500"> ({pct}%)</span></span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    )
-  }
-
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 relative">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -422,146 +363,21 @@ export default function AdminCategoriesPage() {
       />
 
       {/* 분야 정보 수정 모달 */}
-      <Modal open={!!editingCategory} onClose={() => setEditingCategory(null)} className="max-w-sm" labelledBy="cat-edit-title">
-        {editingCategory && (
-          <div className="space-y-4">
-            <h2 id="cat-edit-title" className="text-lg font-black text-slate-800 dark:text-slate-100">📚 분야 정보 수정</h2>
-            <div>
-              <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 mb-1">분야 ID (변경 불가)</label>
-              <input type="text" value={editingCategory.id} disabled className="w-full p-2.5 bg-slate-100 border border-slate-200 rounded-lg font-mono text-sm text-slate-400 uppercase dark:bg-slate-900 dark:border-slate-700 dark:text-slate-500" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">표시 이름 <span className="font-normal text-slate-400 dark:text-slate-500">(사용자 화면에 보이는 짧은 이름)</span></label>
-              <input
-                type="text"
-                value={editingCategory.name}
-                onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
-                placeholder="예: 홍길동"
-                className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">부제(설명) <span className="font-normal text-slate-400 dark:text-slate-500">(선택 · 카드 부제로 표시)</span></label>
-              <input
-                type="text"
-                value={editingCategory.description || ''}
-                onChange={(e) => setEditingCategory({ ...editingCategory, description: e.target.value })}
-                placeholder="예: 1990년대 발라드 가수"
-                className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">AI용 이름 <span className="font-normal text-slate-400 dark:text-slate-500">(선택 · 화면에 안 보임 · 비우면 표시 이름 사용)</span></label>
-              <input
-                type="text"
-                value={editingCategory.ai_name || ''}
-                onChange={(e) => setEditingCategory({ ...editingCategory, ai_name: e.target.value })}
-                placeholder="예: 홍길동(1990년대 발라드 가수) — 동명이인 구분용"
-                className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">출제 프롬프트의 <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded font-mono">{'{{category}}'}</code> 치환에 사용됩니다. 동명이인·중의어 분야의 정확도를 위해 사용.</p>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">상위 그룹 <span className="font-normal text-slate-400 dark:text-slate-500">(선택 · 비우면 미분류)</span></label>
-              <select
-                value={editingCategory.group_id || ''}
-                onChange={(e) => setEditingCategory({ ...editingCategory, group_id: e.target.value || null })}
-                className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100"
-              >
-                <option value="">미분류</option>
-                {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">분야 아이콘 <span className="font-normal text-slate-400 dark:text-slate-500">(선택 · 비우면 기본 💡)</span></label>
-              <div className="flex items-center gap-2">
-                <div className="w-12 h-12 shrink-0 flex items-center justify-center text-2xl bg-slate-50 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600">
-                  {editingCategory.icon || '💡'}
-                </div>
-                <input
-                  type="text"
-                  value={editingCategory.icon || ''}
-                  onChange={(e) => setEditingCategory({ ...editingCategory, icon: e.target.value })}
-                  placeholder="이모지 직접 입력"
-                  className="flex-1 p-2.5 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setEditingCategory({ ...editingCategory, icon: '' })}
-                  className="shrink-0 px-3 py-2.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
-                >
-                  기본값
-                </button>
-              </div>
-              <div className="grid grid-cols-8 gap-1.5 mt-2">
-                {PRESET_ICONS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => setEditingCategory({ ...editingCategory, icon: emoji })}
-                    className={`aspect-square flex items-center justify-center text-lg rounded-lg border transition-colors ${
-                      editingCategory.icon === emoji
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                        : 'border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50'
-                    }`}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">분야별 출제 가이드 <span className="font-normal text-slate-400 dark:text-slate-500">(선택)</span></label>
-              <textarea
-                value={editingCategory.prompt || ''}
-                onChange={(e) => setEditingCategory({ ...editingCategory, prompt: e.target.value })}
-                rows={4}
-                placeholder={'이 분야에 특화된 출제 지시를 적어주세요.\n예: 최신 LTS 기준, 컬렉션·제네릭·스트림 위주. 너무 지엽적인 문법은 제외.'}
-                className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">마스터 프롬프트의 <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded font-mono">{'{{category_guide}}'}</code> 자리에 삽입됩니다. 비워두면 마스터만 사용.</p>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <button onClick={handleSaveEdit} className="flex-1 p-3 bg-blue-600 text-white font-bold rounded-xl text-sm hover:bg-blue-700">변경 저장</button>
-              <button onClick={() => setEditingCategory(null)} className="flex-1 p-3 bg-slate-100 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600">취소</button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      <CategoryEditModal
+        category={editingCategory}
+        groups={groups}
+        onChange={setEditingCategory}
+        onClose={() => setEditingCategory(null)}
+        onSave={handleSaveEdit}
+      />
 
       {/* 분야 통계 모달 */}
-      <Modal open={!!statsCategory} onClose={() => setStatsCategory(null)} className="max-w-md" labelledBy="cat-stats-title">
-        {statsCategory && (
-          <div className="space-y-5">
-            <div>
-              <h2 id="cat-stats-title" className="text-lg font-black text-slate-800 dark:text-slate-100">
-                📊 {statsCategory.icon || '💡'} {statsCategory.name} 통계
-              </h2>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 font-mono uppercase">{statsCategory.id}</p>
-            </div>
-
-            {statsLoading ? (
-              <div className="p-8 text-center text-slate-500 dark:text-slate-400 font-bold">집계 중...</div>
-            ) : !statsData ? (
-              <div className="p-8 text-center text-slate-500 dark:text-slate-400">통계를 불러오지 못했습니다.</div>
-            ) : statsData.total === 0 ? (
-              <div className="p-8 text-center text-slate-500 dark:text-slate-400">이 분야에는 등록된 문제가 없습니다.</div>
-            ) : (
-              <>
-                <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 text-center">
-                  <p className="text-3xl font-black text-slate-800 dark:text-slate-100">{statsData.total}</p>
-                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">총 문제 수</p>
-                </div>
-                {renderStatGroup('상태별', STATUS_META, statsData.status, statsData.total)}
-                {renderStatGroup('유형별', TYPE_META, statsData.type, statsData.total)}
-                {renderStatGroup('난이도별', DIFF_META, statsData.difficulty, statsData.total)}
-              </>
-            )}
-
-            <button onClick={() => setStatsCategory(null)} className="w-full p-3 bg-slate-100 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600">닫기</button>
-          </div>
-        )}
-      </Modal>
+      <CategoryStatsModal
+        category={statsCategory}
+        data={statsData}
+        loading={statsLoading}
+        onClose={() => setStatsCategory(null)}
+      />
     </main>
   )
 }
