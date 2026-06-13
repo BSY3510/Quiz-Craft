@@ -34,6 +34,7 @@ export default function AdminReportsPage() {
 
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterCategory, setFilterCategory] = useState<string>('all')
+  const [sortAsc, setSortAsc] = useState(false) // false=최신순(기본), true=오래된순
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null)
 
   // ✅ 페이지네이션 상태
@@ -59,11 +60,13 @@ export default function AdminReportsPage() {
     fetchData()
   }, [supabase])
 
+  const STATUS_LABEL: Record<string, string> = { pending: '대기 중', resolved: '수정 완료', dismissed: '반려' }
+
   const handleUpdateStatus = async (reportId: string, newStatus: string) => {
     const res = await updateReportStatus(reportId, newStatus)
     if (!res.error) {
       setReports(reports.map(r => r.id === reportId ? { ...r, status: newStatus } : r))
-      toast.success(`상태가 '${newStatus === 'resolved' ? '수정 완료' : '반려'}'로 변경되었습니다.`)
+      toast.success(`상태가 '${STATUS_LABEL[newStatus] ?? newStatus}'(으)로 변경되었습니다.`)
     } else {
       toast.error(res.error)
     }
@@ -87,13 +90,20 @@ export default function AdminReportsPage() {
     return matchStatus && matchCategory
   })
 
-  // ✅ 필터링된 데이터를 10개씩 자르기
-  const totalPages = Math.ceil(filteredReports.length / itemsPerPage)
-  const paginatedReports = filteredReports.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+  // 신고 시간 기준 정렬 (오름/내림 토글)
+  const sortedReports = [...filteredReports].sort((a, b) => {
+    const diff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    return sortAsc ? diff : -diff
+  })
 
-  // 필터 변경 시 1페이지로 리셋 (effect 대신 이벤트에서 처리)
+  // ✅ 정렬된 데이터를 10개씩 자르기
+  const totalPages = Math.ceil(sortedReports.length / itemsPerPage)
+  const paginatedReports = sortedReports.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
+  // 필터/정렬 변경 시 1페이지로 리셋 (effect 대신 이벤트에서 처리)
   const onFilterStatus = (v: string) => { setFilterStatus(v); setCurrentPage(1) }
   const onFilterCategory = (v: string) => { setFilterCategory(v); setCurrentPage(1) }
+  const onSort = (v: string) => { setSortAsc(v === 'asc'); setCurrentPage(1) }
 
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
@@ -123,6 +133,13 @@ export default function AdminReportsPage() {
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
+          <div className="flex-1">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">신고 시간 정렬</label>
+            <select value={sortAsc ? 'asc' : 'desc'} onChange={(e) => onSort(e.target.value)} className="w-full p-2 border rounded-lg text-sm dark:border-slate-600 dark:bg-slate-700">
+              <option value="desc">최신순</option>
+              <option value="asc">오래된순</option>
+            </select>
+          </div>
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -139,11 +156,25 @@ export default function AdminReportsPage() {
                       <Badge tone={statusTone(report.status)} className="px-3 py-1 rounded-lg">{report.status}</Badge>
                       <span className="text-sm font-bold text-slate-400 dark:text-slate-500">{new Date(report.created_at).toLocaleString()}</span>
                     </div>
-                    {report.status === 'pending' && (
+                    {report.status === 'pending' ? (
                       <div className="flex gap-2">
                         <button onClick={() => handleUpdateStatus(report.id, 'resolved')} className="px-3 py-1 bg-green-50 text-green-700 font-bold text-sm rounded border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/50">✓ 해결</button>
                         <button onClick={() => handleUpdateStatus(report.id, 'dismissed')} className="px-3 py-1 bg-slate-100 text-slate-600 font-bold text-sm rounded border border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600">✕ 반려</button>
                       </div>
+                    ) : (
+                      // 처리 완료된 신고도 상태를 다시 바꿀 수 있게 (실수 정정/되돌리기)
+                      <label className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
+                        상태 변경
+                        <select
+                          value={report.status}
+                          onChange={(e) => handleUpdateStatus(report.id, e.target.value)}
+                          className="p-1.5 border rounded-lg text-sm font-medium dark:border-slate-600 dark:bg-slate-700"
+                        >
+                          <option value="pending">대기 중으로 되돌리기</option>
+                          <option value="resolved">해결됨</option>
+                          <option value="dismissed">반려됨</option>
+                        </select>
+                      </label>
                     )}
                   </div>
                   <div className="bg-red-50 p-4 rounded-xl border border-red-100 mb-4 dark:bg-red-900/20 dark:border-red-900/50">
