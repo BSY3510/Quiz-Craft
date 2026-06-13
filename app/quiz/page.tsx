@@ -39,64 +39,73 @@ export default async function QuizDashboardPage() {
 
   return (
     <main className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900 md:items-center">
-      <div className="w-full max-w-md p-4 pt-8 space-y-6">
+      {/* 모바일·태블릿(세로): 단일 세로 흐름 / PC(가로, lg+): 좌측 고정 + 우측 분야 스크롤 2단 */}
+      <div className="w-full max-w-md lg:max-w-5xl p-4 pt-8">
+        <div className="lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-8 lg:items-start">
 
-        {/* 헤더 및 유저 메뉴 */}
-        <header className="flex items-start justify-between">
-          <div>
-            {/* ✅ 수정된 displayName 변수 적용 */}
-            <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100">
-              반갑습니다, {displayName}님! 👋
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">오늘도 지식을 쌓아볼까요?</p>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex gap-2">
-              {/* 관리자 여부 확인 후 버튼 렌더링 */}
-              {profile?.role === 'admin' && (
-                <Link href={adminPath} className="whitespace-nowrap px-3 py-1.5 bg-slate-800 text-white text-sm font-bold rounded-lg hover:bg-slate-900 transition-colors shadow-sm dark:bg-slate-700 dark:hover:bg-slate-600">
-                  관리자 센터
-                </Link>
-              )}
-              <Link href="/me" className="whitespace-nowrap px-3 py-1.5 bg-blue-100 text-blue-700 text-sm font-bold rounded-lg hover:bg-blue-200 transition-colors dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/60">
-                마이페이지
+          {/* 좌측: 인사·레벨·미션·바로가기 (PC에서 상단 고정) */}
+          <div className="space-y-6 lg:sticky lg:top-6">
+
+            {/* 헤더 및 유저 메뉴 */}
+            <header className="flex items-start justify-between">
+              <div>
+                {/* ✅ 수정된 displayName 변수 적용 */}
+                <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100">
+                  반갑습니다, {displayName}님! 👋
+                </h1>
+                <p className="text-slate-500 dark:text-slate-400 mt-1">오늘도 지식을 쌓아볼까요?</p>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <div className="flex gap-2">
+                  {/* 관리자 여부 확인 후 버튼 렌더링 */}
+                  {profile?.role === 'admin' && (
+                    <Link href={adminPath} className="whitespace-nowrap px-3 py-1.5 bg-slate-800 text-white text-sm font-bold rounded-lg hover:bg-slate-900 transition-colors shadow-sm dark:bg-slate-700 dark:hover:bg-slate-600">
+                      관리자 센터
+                    </Link>
+                  )}
+                  <Link href="/me" className="whitespace-nowrap px-3 py-1.5 bg-blue-100 text-blue-700 text-sm font-bold rounded-lg hover:bg-blue-200 transition-colors dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/60">
+                    마이페이지
+                  </Link>
+                </div>
+              </div>
+            </header>
+
+            {/* 온보딩 튜토리얼 (첫 방문 1회 자동 + 사용법 보기) */}
+            <OnboardingTour />
+
+            {/* 내 레벨·학습 현황 배너 (9-2) */}
+            <LevelBanner xp={profile?.xp || 0} streak={profile?.current_streak || 0} />
+
+            {/* 오늘의 미션 (9-3) */}
+            <DailyMissions categories={categories ?? []} />
+
+            {/* 리더보드·배지·북마크·통계 진입 버튼 */}
+            <div className="grid grid-cols-2 gap-3">
+              <Link href="/leaderboard" className="flex flex-col items-center justify-center gap-1 w-full p-4 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors shadow-sm group dark:bg-amber-900/20 dark:border-amber-900 dark:hover:bg-amber-900/30">
+                <span className="text-2xl group-hover:scale-110 transition-transform">🏆</span>
+                <span className="text-xs font-bold text-amber-800 dark:text-amber-300">리더보드</span>
+              </Link>
+              <Link href="/badges" className="flex flex-col items-center justify-center gap-1 w-full p-4 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors shadow-sm group dark:bg-indigo-900/20 dark:border-indigo-900 dark:hover:bg-indigo-900/30">
+                <span className="text-2xl group-hover:scale-110 transition-transform">🎖️</span>
+                <span className="text-xs font-bold text-indigo-800 dark:text-indigo-300">나의 배지</span>
+              </Link>
+              <Link href="/bookmarks" className="flex flex-col items-center justify-center gap-1 w-full p-4 bg-rose-50 border border-rose-200 rounded-xl hover:bg-rose-100 transition-colors shadow-sm group dark:bg-rose-900/20 dark:border-rose-900 dark:hover:bg-rose-900/30">
+                <span className="text-2xl group-hover:scale-110 transition-transform">🔖</span>
+                <span className="text-xs font-bold text-rose-800 dark:text-rose-300">북마크</span>
+              </Link>
+              <Link href="/stats" className="flex flex-col items-center justify-center gap-1 w-full p-4 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors shadow-sm group dark:bg-emerald-900/20 dark:border-emerald-900 dark:hover:bg-emerald-900/30">
+                <span className="text-2xl group-hover:scale-110 transition-transform">📊</span>
+                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">학습 통계</span>
               </Link>
             </div>
           </div>
-        </header>
 
-        {/* 온보딩 튜토리얼 (첫 방문 1회 자동 + 사용법 보기) */}
-        <OnboardingTour />
+          {/* 우측: 학습 분야 (그룹·즐겨찾기·검색·신청). PC에서 좌측 고정한 채 이 영역만 스크롤 */}
+          <div className="mt-6 lg:mt-0">
+            <CategoryList categories={categories ?? []} groups={groups ?? []} favorites={favorites} />
+          </div>
 
-        {/* 내 레벨·학습 현황 배너 (9-2) */}
-        <LevelBanner xp={profile?.xp || 0} streak={profile?.current_streak || 0} />
-
-        {/* 오늘의 미션 (9-3) */}
-        <DailyMissions categories={categories ?? []} />
-
-        {/* 리더보드·배지·북마크·통계 진입 버튼 */}
-        <div className="grid grid-cols-2 gap-3">
-          <Link href="/leaderboard" className="flex flex-col items-center justify-center gap-1 w-full p-4 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors shadow-sm group dark:bg-amber-900/20 dark:border-amber-900 dark:hover:bg-amber-900/30">
-            <span className="text-2xl group-hover:scale-110 transition-transform">🏆</span>
-            <span className="text-xs font-bold text-amber-800 dark:text-amber-300">리더보드</span>
-          </Link>
-          <Link href="/badges" className="flex flex-col items-center justify-center gap-1 w-full p-4 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors shadow-sm group dark:bg-indigo-900/20 dark:border-indigo-900 dark:hover:bg-indigo-900/30">
-            <span className="text-2xl group-hover:scale-110 transition-transform">🎖️</span>
-            <span className="text-xs font-bold text-indigo-800 dark:text-indigo-300">나의 배지</span>
-          </Link>
-          <Link href="/bookmarks" className="flex flex-col items-center justify-center gap-1 w-full p-4 bg-rose-50 border border-rose-200 rounded-xl hover:bg-rose-100 transition-colors shadow-sm group dark:bg-rose-900/20 dark:border-rose-900 dark:hover:bg-rose-900/30">
-            <span className="text-2xl group-hover:scale-110 transition-transform">🔖</span>
-            <span className="text-xs font-bold text-rose-800 dark:text-rose-300">북마크</span>
-          </Link>
-          <Link href="/stats" className="flex flex-col items-center justify-center gap-1 w-full p-4 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors shadow-sm group dark:bg-emerald-900/20 dark:border-emerald-900 dark:hover:bg-emerald-900/30">
-            <span className="text-2xl group-hover:scale-110 transition-transform">📊</span>
-            <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">학습 통계</span>
-          </Link>
         </div>
-
-        {/* 분야 선택 리스트 (그룹·즐겨찾기·검색·신청) */}
-        <CategoryList categories={categories ?? []} groups={groups ?? []} favorites={favorites} />
-        
       </div>
     </main>
   )
