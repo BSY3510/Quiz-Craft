@@ -144,6 +144,8 @@ export function CategoryList({
     const fIdx = fav.indexOf(category.id)
     const isFirst = fIdx <= 0
     const isLast = fIdx === fav.length - 1
+    // 섹션 헤더가 없는 평면 목록이므로, 어떤 카테고리(그룹)인지 카드에 표시한다(미분류는 생략).
+    const grp = category.group_id ? groups.find((g) => g.id === category.group_id) : null
     return (
     <div key={category.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
       <div className="p-5 flex items-center gap-4 border-b border-slate-100 dark:border-slate-700">
@@ -152,6 +154,11 @@ export function CategoryList({
           <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 truncate">{category.name}</h2>
           {category.description && (
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 truncate">{category.description}</p>
+          )}
+          {grp && (
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1 truncate">
+              <span>{grp.icon || '🗂️'}</span>{grp.name}
+            </p>
           )}
         </div>
         {showReorder && (
