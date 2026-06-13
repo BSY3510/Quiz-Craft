@@ -37,6 +37,8 @@ export default function CategoryBoardModal({
   const [aiLoading, setAiLoading] = useState(false)
   const [applying, setApplying] = useState(false)
   const [proposal, setProposal] = useState<Change[] | null>(null)
+  // 신규 카테고리명 인라인 수정값. 키=AI 제안 원본명(소문자), 값=관리자가 다듬은 이름.
+  const [newNameEdits, setNewNameEdits] = useState<Record<string, string>>({})
 
   const groupsSorted = [...groups].sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name, 'ko'))
   const groupIdSet = new Set(groups.map((g) => g.id))
@@ -108,24 +110,47 @@ export default function CategoryBoardModal({
       toast.success('이미 적절히 분류되어 있어요. 변경 제안이 없습니다.')
       return
     }
+    // 신규 카테고리명을 그룹(원본명) 단위로 초기화 → 적용 전 수정 가능
+    const edits: Record<string, string> = {}
+    for (const ch of changes) {
+      if (!ch.isNew) continue
+      const k = ch.group_name.toLowerCase()
+      if (!(k in edits)) edits[k] = ch.group_name
+    }
+    setNewNameEdits(edits)
     setProposal(changes)
   }
 
+  const backToBoard = () => { setProposal(null); setNewNameEdits({}) }
+
   const handleApply = async () => {
     if (!proposal) return
+    // 신규 항목은 관리자가 다듬은 이름으로, 나머지는 원래 대상 그대로 적용
+    const assignments = proposal.map((p) => ({
+      category_id: p.category_id,
+      group_name: p.isNew ? (newNameEdits[p.group_name.toLowerCase()] ?? p.group_name).trim() : p.group_name,
+    }))
     setApplying(true)
-    const res = await applyClassification(proposal.map((p) => ({ category_id: p.category_id, group_name: p.group_name })))
+    const res = await applyClassification(assignments)
     setApplying(false)
     if (res.error) return toast.error(res.error)
     toast.success(`${res.moved}개 분야를 분류했어요${res.created ? ` (새 카테고리 ${res.created}개 생성)` : ''}.`)
     setProposal(null)
+    setNewNameEdits({})
     setSelectedIds(new Set())
     onChanged()
   }
 
-  const close = () => { setProposal(null); setSelectedIds(new Set()); onClose() }
+  const close = () => { setProposal(null); setNewNameEdits({}); setSelectedIds(new Set()); onClose() }
 
-  const newGroupCount = proposal ? new Set(proposal.filter((p) => p.isNew).map((p) => p.toName.toLowerCase())).size : 0
+  // 신규 카테고리명 수정 관련 파생값
+  const existingLower = new Set(groups.map((g) => g.name.trim().toLowerCase()))
+  const newKeys = Object.keys(newNameEdits) // AI 제안 원본명(소문자)
+  const hasEmptyNew = newKeys.some((k) => !newNameEdits[k].trim())
+  const displayTo = (p: Change) => (p.isNew ? (newNameEdits[p.group_name.toLowerCase()]?.trim() || '(미입력)') : p.toName)
+  const newGroupCount = proposal
+    ? new Set(newKeys.map((k) => newNameEdits[k].trim().toLowerCase()).filter((v) => v && !existingLower.has(v))).size
+    : 0
 
   return (
     <Modal open={open} onClose={close} className="max-w-2xl" labelledBy="board-title">
@@ -154,8 +179,27 @@ export default function CategoryBoardModal({
                 AI 제안 <span className="text-indigo-600 dark:text-indigo-400">{proposal.length}건 변경</span>
                 {newGroupCount > 0 && <span className="ml-1 font-normal text-slate-400 dark:text-slate-500">· 새 카테고리 {newGroupCount}개</span>}
               </p>
-              <button onClick={() => setProposal(null)} className="text-xs font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">← 보드로</button>
+              <button onClick={backToBoard} className="text-xs font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">← 보드로</button>
             </div>
+
+            {/* 신규 카테고리명 인라인 수정 (그룹 단위 — 같은 이름의 분야들에 함께 반영) */}
+            {newKeys.length > 0 && (
+              <div className="space-y-2 rounded-lg border border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-900/10 p-3">
+                <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300">✏️ 새 카테고리명 (적용 전 수정 가능)</p>
+                {newKeys.map((k) => (
+                  <input
+                    key={k}
+                    value={newNameEdits[k]}
+                    onChange={(e) => setNewNameEdits((prev) => ({ ...prev, [k]: e.target.value }))}
+                    placeholder="카테고리명을 입력하세요"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                ))}
+                <p className="text-[11px] text-slate-400 dark:text-slate-500">기존 카테고리명과 같게 입력하면 그 카테고리로 합쳐집니다.</p>
+                {hasEmptyNew && <p className="text-[11px] font-bold text-red-500">새 카테고리명을 비울 수 없습니다.</p>}
+              </div>
+            )}
+
             <div className="max-h-[50vh] overflow-y-auto space-y-1 border border-slate-200 dark:border-slate-700 rounded-lg p-2">
               {proposal.map((p) => (
                 <div key={p.category_id} className="flex items-center gap-2 px-2 py-1.5 text-sm">
@@ -164,17 +208,17 @@ export default function CategoryBoardModal({
                   <span className="shrink-0 flex items-center gap-1.5 text-xs">
                     <span className="text-slate-400 dark:text-slate-500">{p.fromName}</span>
                     <span className="text-slate-300 dark:text-slate-600">→</span>
-                    <span className="font-bold text-slate-700 dark:text-slate-200">{p.toName}</span>
+                    <span className="font-bold text-slate-700 dark:text-slate-200">{displayTo(p)}</span>
                     {p.isNew && <span className="px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 font-bold">신규</span>}
                   </span>
                 </div>
               ))}
             </div>
             <div className="flex gap-2">
-              <button onClick={handleApply} disabled={applying} className="flex-1 p-3 bg-indigo-600 text-white font-bold rounded-xl text-sm hover:bg-indigo-700 disabled:opacity-50">
+              <button onClick={handleApply} disabled={applying || hasEmptyNew} className="flex-1 p-3 bg-indigo-600 text-white font-bold rounded-xl text-sm hover:bg-indigo-700 disabled:opacity-50">
                 {applying ? '적용 중…' : `이대로 적용 (${proposal.length}건)`}
               </button>
-              <button onClick={() => setProposal(null)} className="flex-1 p-3 bg-slate-100 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600">취소</button>
+              <button onClick={backToBoard} className="flex-1 p-3 bg-slate-100 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600">취소</button>
             </div>
           </div>
         ) : (
