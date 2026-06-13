@@ -120,7 +120,7 @@ export function CategoryList({
     setReqName(''); setReqDesc(''); setReqGroup(''); setReqReason('')
   }
 
-  // 메인 분야 카드(⭐ 즐겨찾기 해제 포함)
+  // 메인 분야 카드(담기/빼기는 '내 분야 담기' 피커에서 관리하므로 카드엔 별 토글 없음)
   const renderCard = (category: CategoryItem) => (
     <div key={category.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
       <div className="p-5 flex items-center gap-4 border-b border-slate-100 dark:border-slate-700">
@@ -132,14 +132,6 @@ export function CategoryList({
           )}
           <p className="text-xs text-slate-400 dark:text-slate-500 uppercase mt-0.5">{category.id}</p>
         </div>
-        <button
-          onClick={() => toggleFavorite(category.id)}
-          title="내 분야에서 빼기"
-          aria-pressed={favSet.has(category.id)}
-          className="shrink-0 text-2xl leading-none p-1 transition-transform hover:scale-110"
-        >
-          {favSet.has(category.id) ? '⭐' : '☆'}
-        </button>
       </div>
       <div className="flex bg-slate-50 dark:bg-slate-900/50 divide-x divide-slate-200 dark:divide-slate-700">
         <Link href={`/quiz/${category.id}`} className="flex-1 p-3 text-center text-sm font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
