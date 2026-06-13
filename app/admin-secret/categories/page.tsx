@@ -8,6 +8,7 @@ import { createCategory, toggleCategoryActive, updateCategory, deleteCategory, c
 import { useToast } from '@/app/components/Toast'
 import { useConfirm } from '@/app/components/Confirm'
 import { Modal } from '@/app/components/Modal'
+import CategoryBoardModal from './CategoryBoardModal'
 import type { Category, CategoryGroup } from '@/types/db'
 
 // 분야 아이콘 빠른 선택용 프리셋(프로그래밍/학습 분야 위주). 직접 입력도 가능.
@@ -72,6 +73,9 @@ export default function AdminCategoriesPage() {
   const [newName, setNewName] = useState('')
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [search, setSearch] = useState('')
+
+  // 카테고리 관리(분야 분류) 보드 모달
+  const [boardOpen, setBoardOpen] = useState(false)
 
   // 분야 통계 모달 상태
   const [statsCategory, setStatsCategory] = useState<Category | null>(null)
@@ -294,7 +298,10 @@ export default function AdminCategoriesPage() {
 
         {/* 상위 그룹 관리 (7번) */}
         <section className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-3">
-          <h2 className="text-sm font-bold text-slate-700 dark:text-slate-300">🗂️ 상위 그룹 관리 <span className="font-normal text-slate-400 dark:text-slate-500">(분야를 묶어 사용자 화면에 섹션으로 노출)</span></h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-bold text-slate-700 dark:text-slate-300">🗂️ 상위 그룹 관리 <span className="font-normal text-slate-400 dark:text-slate-500">(분야를 묶어 사용자 화면에 섹션으로 노출)</span></h2>
+            <button onClick={() => setBoardOpen(true)} className="shrink-0 px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 whitespace-nowrap">🗂️ 카테고리 관리 · AI 분류</button>
+          </div>
           <form onSubmit={handleCreateGroup} className="flex gap-2">
             <input value={newGroupIcon} onChange={(e) => setNewGroupIcon(e.target.value)} placeholder="🗂️" className="w-16 text-center p-2.5 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500" />
             <input value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="그룹명 (예: 프로그래밍)" className="flex-1 p-2.5 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500" />
@@ -404,6 +411,15 @@ export default function AdminCategoriesPage() {
           )}
         </section>
       </div>
+
+      {/* 카테고리 관리(분야 분류) 보드 모달 + AI 자동 분류 */}
+      <CategoryBoardModal
+        open={boardOpen}
+        onClose={() => setBoardOpen(false)}
+        categories={categories}
+        groups={groups}
+        onChanged={fetchCategories}
+      />
 
       {/* 분야 정보 수정 모달 */}
       <Modal open={!!editingCategory} onClose={() => setEditingCategory(null)} className="max-w-sm" labelledBy="cat-edit-title">
