@@ -52,9 +52,20 @@ export function CategoryList({
   const [reqReason, setReqReason] = useState('')
   const [reqSaving, setReqSaving] = useState(false)
 
+  // 피커 모달: 카테고리(그룹) 섹션 접기/펼치기 상태. 기본 펼침(빈 Set = 모두 펼침).
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const toggleCollapsed = (key: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key); else next.add(key)
+      return next
+    })
+  }
+
   const hasGroups = groups.length > 0
   const groupsSorted = [...groups].sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name, 'ko'))
   const groupIds = new Set(groups.map((g) => g.id))
+  const groupNameById = new Map(groups.map((g) => [g.id, g.name]))
 
   // 주어진 분야 목록을 그룹 섹션으로 묶는다(sort_order → 이름순, 미분류는 마지막 '기타').
   // 그룹이 없으면 라벨 없는 단일 섹션. ※ 4번(카테고리 관리 모달)에서 재사용 예정.
@@ -66,8 +77,16 @@ export function CategoryList({
     ].filter((s) => s.items.length > 0)
   }
 
-  const matchKeyword = (c: CategoryItem, kw: string) =>
-    !kw || c.id.toLowerCase().includes(kw) || c.name.toLowerCase().includes(kw)
+  // 분야 id·이름뿐 아니라 소속 카테고리(그룹)명으로도 검색되게 한다.
+  const matchKeyword = (c: CategoryItem, kw: string) => {
+    if (!kw) return true
+    const groupName = (c.group_id && groupNameById.get(c.group_id)) || ''
+    return (
+      c.id.toLowerCase().includes(kw) ||
+      c.name.toLowerCase().includes(kw) ||
+      groupName.toLowerCase().includes(kw)
+    )
+  }
 
   // 메인: 내 분야(즐겨찾기)만
   const keyword = search.trim().toLowerCase()
@@ -175,7 +194,7 @@ export function CategoryList({
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="🔍 내 분야 검색"
+          placeholder="🔍 내 분야·카테고리 검색"
           className="w-full p-3 pl-4 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
         />
       )}
@@ -234,24 +253,35 @@ export function CategoryList({
                 type="text"
                 value={pickerSearch}
                 onChange={(e) => setPickerSearch(e.target.value)}
-                placeholder="🔍 분야 검색"
+                placeholder="🔍 분야·카테고리 검색"
                 className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
               />
               <div className="max-h-[55vh] overflow-y-auto -mx-1 px-1 space-y-3">
                 {pickerVisible.length === 0 ? (
                   <p className="text-center text-sm text-slate-400 dark:text-slate-500 py-8">&apos;{pickerSearch}&apos; 검색 결과가 없습니다.</p>
                 ) : (
-                  pickerSections.map((sec) => (
-                    <div key={sec.key}>
-                      {sec.label && (
-                        <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 px-1 mb-1 flex items-center gap-1.5">
-                          {sec.icon && <span>{sec.icon}</span>}{sec.label}
-                          <span className="font-normal text-slate-400 dark:text-slate-500">({sec.items.length})</span>
-                        </h3>
-                      )}
-                      <div className="space-y-0.5">{sec.items.map(renderPickerRow)}</div>
-                    </div>
-                  ))
+                  pickerSections.map((sec) => {
+                    // 검색 중에는 접힘 상태를 무시하고 항상 펼친다(매칭 결과가 숨지 않도록).
+                    const isCollapsed = !!sec.label && !pickerKeyword && collapsed.has(sec.key)
+                    return (
+                      <div key={sec.key}>
+                        {sec.label && (
+                          <button
+                            type="button"
+                            onClick={() => toggleCollapsed(sec.key)}
+                            aria-expanded={!isCollapsed}
+                            className="w-full flex items-center gap-1.5 px-1 mb-1 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                          >
+                            <span className="w-3 shrink-0 text-[10px]">{isCollapsed ? '▸' : '▾'}</span>
+                            {sec.icon && <span>{sec.icon}</span>}
+                            <span>{sec.label}</span>
+                            <span className="font-normal text-slate-400 dark:text-slate-500">({sec.items.length})</span>
+                          </button>
+                        )}
+                        {!isCollapsed && <div className="space-y-0.5">{sec.items.map(renderPickerRow)}</div>}
+                      </div>
+                    )
+                  })
                 )}
               </div>
             </>
