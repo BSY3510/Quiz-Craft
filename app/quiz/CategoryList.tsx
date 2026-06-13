@@ -130,7 +130,6 @@ export function CategoryList({
           {category.description && (
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 truncate">{category.description}</p>
           )}
-          <p className="text-xs text-slate-400 dark:text-slate-500 uppercase mt-0.5">{category.id}</p>
         </div>
       </div>
       <div className="flex bg-slate-50 dark:bg-slate-900/50 divide-x divide-slate-200 dark:divide-slate-700">

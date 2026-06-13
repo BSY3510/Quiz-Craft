@@ -65,6 +65,7 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
   const [pool, setPool] = useState<Question[]>([])        // 분야의 전체 활성 문제(세션 재시작용)
   const [questions, setQuestions] = useState<Question[]>([]) // 이번 세션 문항(최대 SESSION_SIZE)
   const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('all') // 8-2 난이도 필터
+  const [categoryName, setCategoryName] = useState<string | null>(null) // 헤더에 표시할 분야 표시명
   const [isLoading, setIsLoading] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
   // 세션 집계
@@ -84,22 +85,26 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
   const [isSubmittingReport, setIsSubmittingReport] = useState(false)
 
   useEffect(() => {
-    async function fetchQuestions() {
-      // ✅ 정답/해설 컬럼은 가져오지 않는다.
-      const { data, error } = await supabase
-        .from('questions')
-        .select('id, type, question_text, code_snippet, options, difficulty')
-        .eq('category_id', categoryId)
-        .eq('status', 'active')
+    async function fetchData() {
+      // ✅ 정답/해설 컬럼은 가져오지 않는다. 분야 표시명도 함께 조회(헤더용).
+      const [{ data, error }, { data: cat }] = await Promise.all([
+        supabase
+          .from('questions')
+          .select('id, type, question_text, code_snippet, options, difficulty')
+          .eq('category_id', categoryId)
+          .eq('status', 'active'),
+        supabase.from('categories').select('name').eq('id', categoryId).single(),
+      ])
 
       if (!error && data) {
         const shuffled = shuffle(data as Question[])
         setPool(shuffled)
         setQuestions(shuffled.slice(0, SESSION_SIZE)) // 첫 세션
       }
+      if (cat?.name) setCategoryName(cat.name)
       setIsLoading(false)
     }
-    fetchQuestions()
+    fetchData()
   }, [categoryId, supabase])
 
   // 현재(또는 지정) 난이도 필터로 풀에서 한 세션 분량을 뽑는다.
@@ -371,7 +376,7 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
             ← 그만 풀고 나가기
           </button>
           <div className="text-sm font-bold text-slate-500 dark:text-slate-400">
-            <span className="uppercase text-blue-600 dark:text-blue-400 mr-2">{categoryId}</span>
+            <span className="text-blue-600 dark:text-blue-400 mr-2">{categoryName || categoryId}</span>
             <span>현재 {currentIndex + 1}문제째 도전 중</span>
           </div>
         </div>
