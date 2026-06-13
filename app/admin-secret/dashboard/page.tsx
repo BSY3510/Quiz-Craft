@@ -8,11 +8,9 @@ import { setQuestionStatus, setQuestionsStatus, deleteQuestion, deleteQuestions 
 import { useToast } from '@/app/components/Toast'
 import { useConfirm } from '@/app/components/Confirm'
 import { Pagination } from '@/app/components/Pagination'
-import { Badge, statusTone, DifficultyBadge } from '@/app/components/ui'
 import QuestionEditModal from '../QuestionEditModal'
+import QuestionTable, { type DashQuestion } from './QuestionTable'
 import type { AdminQuestionRow, Category } from '@/types/db'
-
-type DashQuestion = AdminQuestionRow & { errorRate: number; totalAttempts: number }
 
 export default function AdminDashboardStatsPage() {
   const supabase = createClient()
@@ -294,79 +292,17 @@ export default function AdminDashboardStatsPage() {
           </div>
         )}
 
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-          {isLoading ? (
-            <div className="p-8 text-center text-slate-500 dark:text-slate-400">데이터 집계 중...</div>
-          ) : paginatedQuestions.length === 0 ? (
-            <div className="p-8 text-center text-slate-500 dark:text-slate-400">조건에 부합하는 문제가 존재하지 않습니다.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
-                  <tr>
-                    <th className="p-4 w-10">
-                      <input
-                        type="checkbox"
-                        checked={allPageSelected}
-                        onChange={toggleSelectPage}
-                        aria-label="현재 페이지 전체 선택"
-                        className="w-4 h-4 accent-blue-600 cursor-pointer"
-                      />
-                    </th>
-                    <th className="p-4">분야</th>
-                    <th className="p-4">난이도</th>
-                    <th className="p-4 w-1/2">문제 내용 (클릭하여 전체 수정)</th>
-                    <th className="p-4">오답률</th>
-                    <th className="p-4">상태</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-800 dark:text-slate-200">
-                  {/* ✅ paginatedQuestions를 순회 출력 */}
-                  {paginatedQuestions.map(q => (
-                    <tr key={q.id} className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer ${selectedIds.has(q.id) ? 'bg-blue-50/60 dark:bg-blue-900/10' : ''}`} onClick={() => setEditingQuestion({...q})}>
-                      <td className="p-4" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(q.id)}
-                          onChange={() => toggleSelect(q.id)}
-                          aria-label="문제 선택"
-                          className="w-4 h-4 accent-blue-600 cursor-pointer"
-                        />
-                      </td>
-                      <td className="p-4 font-bold text-blue-600 dark:text-blue-400 uppercase">{q.category_id}</td>
-                      <td className="p-4"><DifficultyBadge difficulty={q.difficulty} /></td>
-                      <td className="p-4">{q.question_text} ✏️</td>
-                      <td className="p-4">
-                        <span className={`font-bold ${q.errorRate > 50 ? 'text-red-500 dark:text-red-400' : 'text-slate-600 dark:text-slate-300'}`}>{q.errorRate.toFixed(1)}%</span>
-                        <span className="text-xs text-slate-400 dark:text-slate-500 block">총 {q.totalAttempts}회 풀이</span>
-                      </td>
-                      <td className="p-4" onClick={(e) => e.stopPropagation()}>
-                        <Badge tone={statusTone(q.status)}>{q.status}</Badge>
-                        {q.status === 'pending_review' && (
-                          <div className="flex gap-1 mt-2">
-                            <button onClick={() => handleSetStatus(q.id, 'active')} className="px-2 py-1 bg-green-50 text-green-700 text-xs font-bold rounded border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/50">✓ 승인</button>
-                            <button onClick={() => handleSetStatus(q.id, 'archived')} className="px-2 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded border border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600">✕ 반려</button>
-                          </div>
-                        )}
-                        {q.status === 'active' && (
-                          <div className="flex gap-1 mt-2">
-                            <button onClick={() => handleSetStatus(q.id, 'archived')} className="px-2 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded border border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600">📦 보관</button>
-                          </div>
-                        )}
-                        {q.status === 'archived' && (
-                          <div className="flex gap-1 mt-2">
-                            <button onClick={() => handleSetStatus(q.id, 'active')} className="px-2 py-1 bg-green-50 text-green-700 text-xs font-bold rounded border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/50">↩ 복원</button>
-                            <button onClick={() => handleDelete(q)} className="px-2 py-1 bg-red-50 text-red-700 text-xs font-bold rounded border border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-900/50">🗑 삭제</button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <QuestionTable
+          questions={paginatedQuestions}
+          isLoading={isLoading}
+          selectedIds={selectedIds}
+          allPageSelected={allPageSelected}
+          onToggleSelect={toggleSelect}
+          onToggleSelectPage={toggleSelectPage}
+          onEdit={(q) => setEditingQuestion({ ...q })}
+          onSetStatus={handleSetStatus}
+          onDelete={handleDelete}
+        />
 
         {/* 페이지 크기 선택 + 페이지네이션 */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
