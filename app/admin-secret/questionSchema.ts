@@ -4,6 +4,7 @@
 // camelCase(question/answerId/codeSnippet)를 모두 수용해 DB 컬럼 형태로 정규화.
 
 import { SchemaType, type ResponseSchema } from '@google/generative-ai'
+import { DUPLICATE_THRESHOLD } from '@/app/lib/constants'
 
 // Gemini 구조 강제 출력 스키마. responseSchema 로 넘기면 모델이 따옴표 누락·
 // 이스케이프 깨짐 같은 무효 JSON을 만들지 못하도록 생성 자체를 제약한다(오류 #2/#3 예방).
@@ -291,7 +292,7 @@ function jaccard(a: Set<string>, b: Set<string>): number {
 export function filterNearDuplicates(
   candidates: NormalizedQuestion[],
   existingTexts: string[],
-  threshold = 0.82
+  threshold = DUPLICATE_THRESHOLD
 ): NormalizedQuestion[] {
   const existingSets = existingTexts.filter(Boolean).map(dupTokens)
   const acceptedSets: Set<string>[] = []

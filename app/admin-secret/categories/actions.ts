@@ -5,6 +5,7 @@ import { checkAdmin } from '@/utils/auth'
 import { revalidatePath } from 'next/cache'
 import { GoogleGenerativeAI, SchemaType, type ResponseSchema } from '@google/generative-ai'
 import { parseJsonLoose } from '../questionSchema'
+import { DEFAULT_GEMINI_MODEL } from '@/app/lib/constants'
 
 // 분야 생성
 export async function createCategory(id: string, name: string) {
@@ -211,7 +212,7 @@ ${catLines}
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-    const modelName = settings?.gemini_model || process.env.GEMINI_MODEL_VERSION || 'gemini-3.1-flash-lite'
+    const modelName = settings?.gemini_model || process.env.GEMINI_MODEL_VERSION || DEFAULT_GEMINI_MODEL
     const model = genAI.getGenerativeModel({
       model: modelName,
       generationConfig: { responseMimeType: 'application/json', responseSchema: CLASSIFY_SCHEMA },

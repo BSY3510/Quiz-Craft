@@ -12,6 +12,7 @@ import { DifficultyBadge } from '@/app/components/ui'
 import QuestionReactions from '@/app/components/QuestionReactions'
 import CodeBlock from '@/app/components/CodeBlock'
 import ShareResult from './ShareResult'
+import { SESSION_SIZE } from '@/app/lib/constants'
 
 // ✅ 정답(answer_id)과 해설(explanation)은 클라이언트로 받지 않는다(SEC-A).
 //    제출 후 서버 채점 결과(GradeResult)로만 노출된다.
@@ -30,9 +31,6 @@ interface GradeResult {
   explanation: string;
   xpAwarded: number;
 }
-
-// 한 세션당 문항 수. 활성 문제가 이보다 적으면 있는 만큼만.
-const SESSION_SIZE = 10
 
 // 난이도 풀이 필터 (8-2). 'all'이면 전체에서 혼합.
 type DifficultyFilter = 'all' | 'easy' | 'medium' | 'hard'

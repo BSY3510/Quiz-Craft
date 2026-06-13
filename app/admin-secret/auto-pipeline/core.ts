@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { DEFAULT_GEMINI_MODEL, GENERATION_MAX_RETRIES } from '@/app/lib/constants'
 import {
   buildPrompt,
   buildAvoidanceNote,
@@ -76,7 +77,7 @@ export async function generateForCategory(
     }) + buildDifficultyNote(difficultyOpts) + buildAvoidanceNote(existingTexts)
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-  const modelName = settings.gemini_model || process.env.GEMINI_MODEL_VERSION || 'gemini-3.1-flash-lite'
+  const modelName = settings.gemini_model || process.env.GEMINI_MODEL_VERSION || DEFAULT_GEMINI_MODEL
 
   const model = genAI.getGenerativeModel({
     model: modelName,
@@ -90,7 +91,7 @@ export async function generateForCategory(
   // 생성 → 파싱 → 구조 검증, 깨진 JSON 대비 최대 3회 재시도
   let questions: NormalizedQuestion[] | null = null
   let lastErr = '알 수 없는 오류'
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < GENERATION_MAX_RETRIES; attempt++) {
     try {
       const result = await model.generateContent(systemPrompt)
       const c = normalizeAndValidate(parseJsonLoose(result.response.text()))

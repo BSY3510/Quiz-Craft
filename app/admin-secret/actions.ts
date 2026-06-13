@@ -5,6 +5,7 @@ import { checkAdmin } from '@/utils/auth'
 import { buildPrompt, buildTypeNote, buildDifficultyNote, coerceType, normalizeList, normalizeAndValidate, parseJsonLoose, normalizeDifficultyRatio, QUESTION_RESPONSE_SCHEMA, type Difficulty } from './questionSchema'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { revalidatePath } from 'next/cache'
+import { DEFAULT_GEMINI_MODEL, GENERATION_MAX_RETRIES } from '@/app/lib/constants'
 
 // 1. AI 문제 초안 생성 서버 액션 (DB 연동 동적 프롬프트 적용)
 export async function generateQuizDraft(formData: FormData) {
@@ -50,7 +51,7 @@ export async function generateQuizDraft(formData: FormData) {
     }) + buildDifficultyNote(fixedDifficulty ? { fixed: fixedDifficulty } : undefined)
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-    const modelName = settings.gemini_model || process.env.GEMINI_MODEL_VERSION || 'gemini-3.1-flash-lite'
+    const modelName = settings.gemini_model || process.env.GEMINI_MODEL_VERSION || DEFAULT_GEMINI_MODEL
 
     const model = genAI.getGenerativeModel({
       model: modelName,
@@ -61,7 +62,7 @@ export async function generateQuizDraft(formData: FormData) {
     // ✅ 생성 → 파싱 정규화. 모델이 가끔 깨진 JSON을 내므로 최대 3회 재시도.
     let generatedQuestions: ReturnType<typeof normalizeList> = []
     let parseErr: unknown = null
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < GENERATION_MAX_RETRIES; attempt++) {
       try {
         const result = await model.generateContent(systemPrompt)
         const list = coerceType(normalizeList(parseJsonLoose(result.response.text())), type)

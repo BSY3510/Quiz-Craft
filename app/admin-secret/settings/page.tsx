@@ -6,13 +6,14 @@ import Link from 'next/link'
 import { useAdminPath } from '../useAdminPath'
 import { setGoogleLogin, setGeminiModel, setAutoGenerate, setAutoGenerateConfig, setAutoApproveSignup, setAllowedEmailDomains } from '../actions'
 import { useToast } from '@/app/components/Toast'
+import { DEFAULT_GEMINI_MODEL } from '@/app/lib/constants'
 
 interface Category { id: string; name: string }
 const AUTO_GEN_COUNTS = [3, 5, 10, 20]
 
 // 2026-06 무료 티어 모델 (한도 안내). gemini-3.1-flash-lite가 가장 널널.
 const GEMINI_MODELS = [
-  { value: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite (무료 한도 최대 · 권장)' },
+  { value: DEFAULT_GEMINI_MODEL, label: 'Gemini 3.1 Flash-Lite (무료 한도 최대 · 권장)' },
   { value: 'gemini-3-flash', label: 'Gemini 3 Flash' },
   { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
   { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite' },
@@ -29,7 +30,7 @@ export default function AdminSettingsPage() {
   const [allowedDomainsText, setAllowedDomainsText] = useState('')
   const [isSavingDomains, setIsSavingDomains] = useState(false)
   const [isAutoGenEnabled, setIsAutoGenEnabled] = useState(false)
-  const [model, setModel] = useState('gemini-3.1-flash-lite')
+  const [model, setModel] = useState(DEFAULT_GEMINI_MODEL)
   const [isSavingModel, setIsSavingModel] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
