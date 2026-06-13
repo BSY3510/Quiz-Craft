@@ -38,7 +38,9 @@ export function CategoryList({
 }) {
   const toast = useToast()
   const [search, setSearch] = useState('') // 내 분야 검색
-  const [favSet, setFavSet] = useState<Set<string>>(() => new Set(favorites))
+  // 내 분야: 배열 순서 = 사용자 지정 표시 순서. 멤버십 확인용 Set은 파생.
+  const [fav, setFav] = useState<string[]>(() => favorites)
+  const favSet = new Set(fav)
 
   // 내 분야 담기(피커) 모달
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -88,24 +90,41 @@ export function CategoryList({
     )
   }
 
-  // 메인: 내 분야(즐겨찾기)만
+  // 메인: 내 분야(즐겨찾기)만 — fav 배열 순서대로 평면 표시
   const keyword = search.trim().toLowerCase()
-  const myCategories = categories.filter((c) => favSet.has(c.id))
+  const byId = new Map(categories.map((c) => [c.id, c]))
+  const myCategories = fav.map((id) => byId.get(id)).filter(Boolean) as CategoryItem[]
   const myVisible = myCategories.filter((c) => matchKeyword(c, keyword))
-  const mySections = groupIntoSections(myVisible)
 
   // 피커: 전체 분야 + 검색
   const pickerKeyword = pickerSearch.trim().toLowerCase()
   const pickerVisible = categories.filter((c) => matchKeyword(c, pickerKeyword))
   const pickerSections = groupIntoSections(pickerVisible)
 
+  // 즐겨찾기 추가(맨 뒤)/해제. 배열 순서 보존.
   const toggleFavorite = async (id: string) => {
-    const next = new Set(favSet)
-    if (next.has(id)) next.delete(id); else next.add(id)
-    setFavSet(next)
-    const res = await setFavoriteCategories([...next])
+    const prev = fav
+    const next = fav.includes(id) ? fav.filter((x) => x !== id) : [...fav, id]
+    setFav(next)
+    const res = await setFavoriteCategories(next)
     if (res.error) {
-      setFavSet(favSet) // 롤백
+      setFav(prev) // 롤백
+      toast.error(res.error)
+    }
+  }
+
+  // 내 분야 순서 이동(-1=위, +1=아래). 이웃과 자리 교환 후 저장.
+  const moveFavorite = async (id: string, dir: -1 | 1) => {
+    const idx = fav.indexOf(id)
+    const target = idx + dir
+    if (idx < 0 || target < 0 || target >= fav.length) return
+    const prev = fav
+    const next = [...fav]
+    ;[next[idx], next[target]] = [next[target], next[idx]]
+    setFav(next)
+    const res = await setFavoriteCategories(next)
+    if (res.error) {
+      setFav(prev) // 롤백
       toast.error(res.error)
     }
   }
@@ -120,8 +139,12 @@ export function CategoryList({
     setReqName(''); setReqDesc(''); setReqGroup(''); setReqReason('')
   }
 
-  // 메인 분야 카드(담기/빼기는 '내 분야 담기' 피커에서 관리하므로 카드엔 별 토글 없음)
-  const renderCard = (category: CategoryItem) => (
+  // 메인 분야 카드(담기/빼기는 '내 분야 담기' 피커에서 관리). showReorder=true 면 순서 이동 ▲▼ 노출.
+  const renderCard = (category: CategoryItem, showReorder: boolean) => {
+    const fIdx = fav.indexOf(category.id)
+    const isFirst = fIdx <= 0
+    const isLast = fIdx === fav.length - 1
+    return (
     <div key={category.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
       <div className="p-5 flex items-center gap-4 border-b border-slate-100 dark:border-slate-700">
         <div className="text-4xl bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">{iconFor(category)}</div>
@@ -131,6 +154,26 @@ export function CategoryList({
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 truncate">{category.description}</p>
           )}
         </div>
+        {showReorder && (
+          <div className="shrink-0 flex flex-col gap-1">
+            <button
+              onClick={() => moveFavorite(category.id, -1)}
+              disabled={isFirst}
+              aria-label="위로 이동"
+              className="w-7 h-7 flex items-center justify-center text-xs rounded-lg border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              ▲
+            </button>
+            <button
+              onClick={() => moveFavorite(category.id, 1)}
+              disabled={isLast}
+              aria-label="아래로 이동"
+              className="w-7 h-7 flex items-center justify-center text-xs rounded-lg border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              ▼
+            </button>
+          </div>
+        )}
       </div>
       <div className="flex bg-slate-50 dark:bg-slate-900/50 divide-x divide-slate-200 dark:divide-slate-700">
         <Link href={`/quiz/${category.id}`} className="flex-1 p-3 text-center text-sm font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
@@ -141,7 +184,8 @@ export function CategoryList({
         </Link>
       </div>
     </div>
-  )
+    )
+  }
 
   // 피커 모달 행(체크박스로 담기/빼기 — 즉시 반영)
   const renderPickerRow = (category: CategoryItem) => (
@@ -212,17 +256,10 @@ export function CategoryList({
           &apos;{search}&apos; 검색 결과가 없습니다.
         </div>
       ) : (
-        mySections.map((sec) => (
-          <div key={sec.key} className="flex flex-col gap-3">
-            {sec.label && (
-              <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5">
-                {sec.icon && <span>{sec.icon}</span>}{sec.label}
-                <span className="text-xs font-normal text-slate-400 dark:text-slate-500">({sec.items.length})</span>
-              </h3>
-            )}
-            {sec.items.map(renderCard)}
-          </div>
-        ))
+        // 내 분야: 사용자 지정 순서대로 평면 표시. 검색 중이 아닐 때만 ▲▼ 순서 이동 노출.
+        <div className="flex flex-col gap-3">
+          {myVisible.map((c) => renderCard(c, !keyword))}
+        </div>
       )}
 
       {/* 내 분야 담기(피커) 모달 */}
