@@ -3,10 +3,9 @@
 import { useState, useEffect, useCallback, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
-import { submitReport } from '@/app/actions/report' // ✅ 신고 서버 액션 추가
 import { useToast } from '@/app/components/Toast'
 import { useConfirm } from '@/app/components/Confirm'
-import { Modal } from '@/app/components/Modal'
+import ReportModal from './ReportModal'
 import { Skeleton } from '@/app/components/Skeleton'
 import { DifficultyBadge } from '@/app/components/ui'
 import QuestionReactions from '@/app/components/QuestionReactions'
@@ -77,10 +76,9 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
   // ✅ 서버 채점 결과(정/오답·정답ID·해설·획득XP)를 담는다.
   const [result, setResult] = useState<GradeResult | null>(null)
 
-  // ✅ 신고 기능 관련 상태 추가
+  // ✅ 신고 모달 열림 상태(사유·제출 상태는 ReportModal 내부에서 관리).
+  //    여기서 보유하는 이유: 키보드 단축키 가드 + 다음 문제로 넘어갈 때 닫기.
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
-  const [reportReason, setReportReason] = useState('')
-  const [isSubmittingReport, setIsSubmittingReport] = useState(false)
 
   useEffect(() => {
     async function fetchData() {
@@ -236,7 +234,6 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
     setWasSkipped(false)
     setResult(null)
     setIsReportModalOpen(false) // 다음 문제로 갈 때 모달 닫기
-    setReportReason('')
   }, [])
 
   // 8-3 키보드 단축키: 숫자키 보기 선택 · Enter 제출/다음 · S 건너뛰기
@@ -346,23 +343,6 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
         </div>
       </main>
     )
-  }
-
-  // ✅ 신고 접수 핸들러
-  const handleReportSubmit = async () => {
-    if (!reportReason.trim()) { toast.error('신고 사유를 입력해 주세요.'); return }
-
-    setIsSubmittingReport(true)
-    const result = await submitReport(currentQuestion.id, reportReason)
-    setIsSubmittingReport(false)
-
-    if (result.success) {
-      toast.success('신고가 정상적으로 접수되었습니다. 소중한 의견 감사합니다!')
-      setIsReportModalOpen(false)
-      setReportReason('')
-    } else {
-      toast.error(`오류: ${result.error}`)
-    }
   }
 
   return (
@@ -502,40 +482,12 @@ export default function QuizSolverPage({ params }: { params: Promise<{ category:
         </div>
       </div>
 
-      {/* ✅ 오류 신고 모달 */}
-      <Modal
+      {/* ✅ 오류 신고 모달 (사유·제출은 컴포넌트 내부 관리) */}
+      <ReportModal
         open={isReportModalOpen}
-        onClose={() => { setIsReportModalOpen(false); setReportReason('') }}
-        className="max-w-md"
-        labelledBy="report-title"
-      >
-        <h3 id="report-title" className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">🚨 문제 오류 신고</h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">문제의 오타나 잘못된 해설 등 오류를 알려주시면 검토 후 반영하겠습니다.</p>
-
-        <textarea
-          value={reportReason}
-          onChange={(e) => setReportReason(e.target.value)}
-          placeholder="예: 해설에 설명된 개념이 최신 버전과 다릅니다."
-          className="w-full p-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg text-sm text-slate-800 mb-4"
-          rows={4}
-        />
-
-        <div className="flex gap-2">
-          <button
-            onClick={handleReportSubmit}
-            disabled={isSubmittingReport || !reportReason.trim()}
-            className="flex-1 py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 disabled:opacity-50 transition-colors"
-          >
-            {isSubmittingReport ? '접수 중...' : '신고하기'}
-          </button>
-          <button
-            onClick={() => { setIsReportModalOpen(false); setReportReason('') }}
-            className="flex-1 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
-          >
-            취소
-          </button>
-        </div>
-      </Modal>
+        questionId={currentQuestion?.id ?? null}
+        onClose={() => setIsReportModalOpen(false)}
+      />
     </main>
   )
 }
